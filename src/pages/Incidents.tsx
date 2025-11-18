@@ -200,9 +200,9 @@ export default function Incidents() {
         severity: formData.severity,
         incident_date: formData.incident_date || new Date().toISOString(),
         location: formData.location || null,
-        department_id: formData.department_id || null,
-        affected_employee_id: formData.affected_employee_id || null,
-        reported_by_id: formData.reported_by_id || null,
+        department_id: formData.department_id === "none" ? null : formData.department_id || null,
+        affected_employee_id: formData.affected_employee_id === "none" ? null : formData.affected_employee_id || null,
+        reported_by_id: formData.reported_by_id === "none" ? null : formData.reported_by_id || null,
         root_cause: formData.root_cause || null,
         immediate_actions: formData.immediate_actions || null,
         investigation_status: formData.investigation_status,
@@ -262,9 +262,9 @@ export default function Incidents() {
       severity: incident.severity,
       incident_date: incident.incident_date ? incident.incident_date.split("T")[0] : "",
       location: incident.location || "",
-      department_id: incident.department_id || "",
-      affected_employee_id: incident.affected_employee_id || "",
-      reported_by_id: incident.reported_by_id || "",
+      department_id: incident.department_id || "none",
+      affected_employee_id: incident.affected_employee_id || "none",
+      reported_by_id: incident.reported_by_id || "none",
       root_cause: incident.root_cause || "",
       immediate_actions: incident.immediate_actions || "",
       investigation_status: incident.investigation_status,
@@ -280,9 +280,9 @@ export default function Incidents() {
       severity: "minor",
       incident_date: "",
       location: "",
-      department_id: "",
-      affected_employee_id: "",
-      reported_by_id: "",
+      department_id: "none",
+      affected_employee_id: "none",
+      reported_by_id: "none",
       root_cause: "",
       immediate_actions: "",
       investigation_status: "open",
@@ -538,7 +538,7 @@ export default function Incidents() {
                           <SelectValue placeholder="Select department" />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="">None</SelectItem>
+                          <SelectItem value="none">None</SelectItem>
                           {departments.map((dept) => (
                             <SelectItem key={dept.id} value={dept.id}>
                               {dept.name}
@@ -562,7 +562,7 @@ export default function Incidents() {
                           <SelectValue placeholder="Select employee" />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="">None</SelectItem>
+                          <SelectItem value="none">None</SelectItem>
                           {employees.map((emp) => (
                             <SelectItem key={emp.id} value={emp.id}>
                               {emp.full_name}
@@ -584,7 +584,7 @@ export default function Incidents() {
                           <SelectValue placeholder="Select employee" />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="">None</SelectItem>
+                          <SelectItem value="none">None</SelectItem>
                           {employees.map((emp) => (
                             <SelectItem key={emp.id} value={emp.id}>
                               {emp.full_name}

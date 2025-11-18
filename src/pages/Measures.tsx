@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft, Plus, Search, CheckCircle, Clock, X, Edit, Trash2 } from "lucide-react";
+import { ArrowLeft, Plus, Search, CheckCircle, Clock, X, Edit, Trash2, FileDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -40,6 +40,8 @@ import { Label } from "@/components/ui/label";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { format } from "date-fns";
+import jsPDF from "jspdf";
+import autoTable from "jspdf-autotable";
 
 interface Measure {
   id: string;
@@ -156,7 +158,7 @@ export default function Measures() {
         description: formData.description || null,
         measure_type: formData.measure_type,
         status: formData.status,
-        responsible_person_id: formData.responsible_person_id || null,
+        responsible_person_id: formData.responsible_person_id === "none" ? null : formData.responsible_person_id || null,
         due_date: formData.due_date || null,
         completion_date: formData.completion_date || null,
         verification_method: formData.verification_method || null,
@@ -213,7 +215,7 @@ export default function Measures() {
       description: measure.description || "",
       measure_type: measure.measure_type,
       status: measure.status,
-      responsible_person_id: measure.responsible_person_id || "",
+      responsible_person_id: measure.responsible_person_id || "none",
       due_date: measure.due_date || "",
       completion_date: measure.completion_date || "",
       verification_method: measure.verification_method || "",
@@ -227,7 +229,7 @@ export default function Measures() {
       description: "",
       measure_type: "corrective",
       status: "planned",
-      responsible_person_id: "",
+      responsible_person_id: "none",
       due_date: "",
       completion_date: "",
       verification_method: "",
@@ -266,6 +268,39 @@ export default function Measures() {
     return matchesSearch && matchesStatus && matchesType;
   });
 
+  const exportToPDF = () => {
+    const doc = new jsPDF();
+    
+    // Add title
+    doc.setFontSize(18);
+    doc.text("Measures & Controls Report", 14, 22);
+    doc.setFontSize(11);
+    doc.text(`Generated on: ${format(new Date(), "PPP")}`, 14, 30);
+    
+    // Prepare table data
+    const tableData = filteredMeasures.map((measure) => [
+      measure.title,
+      measure.measure_type.charAt(0).toUpperCase() + measure.measure_type.slice(1),
+      measure.status.charAt(0).toUpperCase() + measure.status.slice(1),
+      measure.responsible_person?.full_name || "Unassigned",
+      measure.due_date ? format(new Date(measure.due_date), "MMM dd, yyyy") : "No deadline",
+    ]);
+
+    autoTable(doc, {
+      head: [["Measure Title", "Type", "Status", "Responsible", "Due Date"]],
+      body: tableData,
+      startY: 35,
+      styles: { fontSize: 9 },
+      headStyles: { fillColor: [37, 99, 235] },
+    });
+
+    doc.save(`measures_report_${format(new Date(), "yyyy-MM-dd")}.pdf`);
+    toast({
+      title: "Success",
+      description: "PDF exported successfully",
+    });
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
@@ -300,13 +335,18 @@ export default function Measures() {
                 Manage corrective, preventive, and improvement measures
               </CardDescription>
             </div>
-            <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-              <DialogTrigger asChild>
-                <Button onClick={resetForm}>
-                  <Plus className="w-4 h-4 mr-2" />
-                  Add Measure
-                </Button>
-              </DialogTrigger>
+            <div className="flex gap-2">
+              <Button variant="outline" onClick={exportToPDF}>
+                <FileDown className="w-4 h-4 mr-2" />
+                Export PDF
+              </Button>
+              <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+                <DialogTrigger asChild>
+                  <Button onClick={resetForm}>
+                    <Plus className="w-4 h-4 mr-2" />
+                    Add Measure
+                  </Button>
+                </DialogTrigger>
               <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
                 <DialogHeader>
                   <DialogTitle>
@@ -390,7 +430,7 @@ export default function Measures() {
                         <SelectValue placeholder="Select responsible person" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="">None</SelectItem>
+                        <SelectItem value="none">None</SelectItem>
                         {employees.map((emp) => (
                           <SelectItem key={emp.id} value={emp.id}>
                             {emp.full_name}
@@ -455,6 +495,7 @@ export default function Measures() {
                 </form>
               </DialogContent>
             </Dialog>
+            </div>
           </div>
         </CardHeader>
         <CardContent>
