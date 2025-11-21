@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
+import { useLanguage } from "@/contexts/LanguageContext";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
@@ -30,6 +31,7 @@ interface Channel {
 
 export default function Messages() {
   const { user, companyId } = useAuth();
+  const { t } = useLanguage();
   const { toast } = useToast();
   const [messages, setMessages] = useState<Message[]>([]);
   const [channels, setChannels] = useState<Channel[]>([]);
@@ -57,7 +59,12 @@ export default function Messages() {
       const companyChannels: Channel[] = [
         { id: "general", name: "General", type: "company", unread_count: 0 },
         { id: "safety", name: "Safety", type: "company", unread_count: 0 },
-        { id: "announcements", name: "Announcements", type: "company", unread_count: 0 },
+        {
+          id: "announcements",
+          name: "Announcements",
+          type: "company",
+          unread_count: 0,
+        },
       ];
 
       // Fetch employees for DMs
@@ -198,13 +205,13 @@ export default function Messages() {
   return (
     <div className="h-[calc(100vh-4rem)] flex gap-4 p-4">
       {/* Sidebar */}
-      <Card className="w-80 flex flex-col">
+      <Card className="w-80 flex flex-col border-0 shadow-xl">
         <CardHeader className="border-b">
-          <CardTitle className="text-xl">Messages</CardTitle>
+          <CardTitle className="text-xl">{t("messages.title")}</CardTitle>
           <div className="relative mt-4">
             <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
             <Input
-              placeholder="Search channels..."
+              placeholder={t("messages.searchChannels")}
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="pl-9"
@@ -217,7 +224,7 @@ export default function Messages() {
               <div className="flex items-center justify-between mb-2">
                 <h3 className="text-sm font-semibold text-muted-foreground flex items-center gap-2">
                   <Hash className="h-4 w-4" />
-                  Channels
+                  {t("messages.channels")}
                 </h3>
                 <Button variant="ghost" size="sm" className="h-6 w-6 p-0">
                   <Plus className="h-4 w-4" />
@@ -254,7 +261,7 @@ export default function Messages() {
               <div className="flex items-center justify-between mb-2">
                 <h3 className="text-sm font-semibold text-muted-foreground flex items-center gap-2">
                   <MessageCircle className="h-4 w-4" />
-                  Direct Messages
+                  {t("messages.directMessages")}
                 </h3>
                 <Button variant="ghost" size="sm" className="h-6 w-6 p-0">
                   <Plus className="h-4 w-4" />
@@ -295,7 +302,7 @@ export default function Messages() {
       </Card>
 
       {/* Main Chat */}
-      <Card className="flex-1 flex flex-col">
+      <Card className="flex-1 flex flex-col border-0 shadow-xl">
         {activeChannel ? (
           <>
             <CardHeader className="border-b">
@@ -313,17 +320,19 @@ export default function Messages() {
                     </Avatar>
                   )}
                   <div>
-                    <h2 className="text-xl font-semibold">{activeChannel.name}</h2>
+                    <h2 className="text-xl font-semibold">
+                      {activeChannel.name}
+                    </h2>
                     <p className="text-sm text-muted-foreground">
                       {activeChannel.type === "company"
-                        ? "Company-wide channel"
-                        : "Direct message"}
+                        ? t("messages.companyChannel")
+                        : t("messages.directMessage")}
                     </p>
                   </div>
                 </div>
                 <Button variant="outline" size="sm">
                   <Users className="h-4 w-4 mr-2" />
-                  Members
+                  {t("messages.members")}
                 </Button>
               </div>
             </CardHeader>
@@ -333,7 +342,7 @@ export default function Messages() {
                 {messages.length === 0 ? (
                   <div className="text-center text-muted-foreground py-12">
                     <MessageCircle className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                    <p>No messages yet. Start the conversation!</p>
+                    <p>{t("messages.noMessages")}</p>
                   </div>
                 ) : (
                   messages.map((message) => (
@@ -365,7 +374,9 @@ export default function Messages() {
             <div className="border-t p-4">
               <div className="flex gap-2">
                 <Input
-                  placeholder={`Message ${activeChannel.name}...`}
+                  placeholder={`${t("messages.messagePlaceholder")} ${
+                    activeChannel.name
+                  }...`}
                   value={messageInput}
                   onChange={(e) => setMessageInput(e.target.value)}
                   onKeyPress={handleKeyPress}
@@ -376,7 +387,7 @@ export default function Messages() {
                 </Button>
               </div>
               <p className="text-xs text-muted-foreground mt-2">
-                Press Enter to send, Shift+Enter for new line
+                {t("messages.sendInstructions")}
               </p>
             </div>
           </>
@@ -384,8 +395,10 @@ export default function Messages() {
           <div className="flex-1 flex items-center justify-center text-muted-foreground">
             <div className="text-center">
               <MessageCircle className="h-16 w-16 mx-auto mb-4 opacity-50" />
-              <h3 className="text-lg font-semibold mb-2">Select a channel</h3>
-              <p className="text-sm">Choose a channel to start messaging</p>
+              <h3 className="text-lg font-semibold mb-2">
+                {t("messages.selectChannel")}
+              </h3>
+              <p className="text-sm">{t("messages.selectChannelDesc")}</p>
             </div>
           </div>
         )}

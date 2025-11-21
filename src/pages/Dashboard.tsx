@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
+import { useLanguage } from "@/contexts/LanguageContext";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -12,6 +13,13 @@ import {
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import {
   Shield,
   Users,
@@ -45,6 +53,7 @@ import {
 export default function Dashboard() {
   const { user, userRole, companyId, companyName, loading, signOut } =
     useAuth();
+  const { t } = useLanguage();
   const navigate = useNavigate();
   const [stats, setStats] = useState({
     employees: 0,
@@ -54,12 +63,12 @@ export default function Dashboard() {
     complianceRate: 0,
     overdueObligations: 0,
     recentIncidents: 0,
+    recentHazards: 0,
   });
 
-  const [healthCheckups, setHealthCheckups] = useState<any[]>([]);
+  const [taskStats, setTaskStats] = useState<any[]>([]);
   const [tasks, setTasks] = useState<any[]>([]);
-  const [showCompletedTasks, setShowCompletedTasks] = useState(false);
-  const [recentAlerts, setRecentAlerts] = useState<any[]>([]);
+  const [taskStatusFilter, setTaskStatusFilter] = useState<string>("upcoming");
 
   useEffect(() => {
     if (!loading && !user) {
@@ -70,16 +79,16 @@ export default function Dashboard() {
   useEffect(() => {
     if (companyId && userRole !== "super_admin") {
       fetchStats();
-      fetchHealthCheckups();
+      fetchTaskStats();
       fetchTasks();
     }
-  }, [companyId, userRole]);
+  }, [companyId, userRole, taskStatusFilter]);
 
   useEffect(() => {
     if (companyId && userRole !== "super_admin") {
       fetchTasks();
     }
-  }, [showCompletedTasks, companyId, userRole]);
+  }, [companyId, userRole]);
 
   const fetchStats = async () => {
     if (!companyId) return;
@@ -125,6 +134,9 @@ export default function Dashboard() {
       // Calculate recent incidents (last 7 days)
       const recentIncidents = await fetchRecentIncidents();
 
+      // Calculate recent hazards (last 7 days)
+      const recentHazards = await fetchRecentHazards();
+
       setStats({
         employees: employeesRes.count || 45,
         riskAssessments: risksRes.count || 12,
@@ -133,10 +145,8 @@ export default function Dashboard() {
         complianceRate,
         overdueObligations,
         recentIncidents,
+        recentHazards,
       });
-
-      // Fetch recent alerts/tasks
-      await fetchRecentAlerts();
     } catch (error) {
       console.error("Error fetching stats:", error);
     }
@@ -190,67 +200,81 @@ export default function Dashboard() {
     }
   };
 
-  const fetchHealthCheckups = async () => {
+  const fetchTaskStats = async () => {
     if (!companyId) return;
 
     try {
-      const today = new Date().toISOString();
-
-      // Fetch health checkup data from medical_records or similar table
+      // Fetch task statistics from tasks table
       const { data, error } = await supabase
-        .from("medical_records")
-        .select("id, status, scheduled_date")
-        .eq("company_id", companyId)
-        .order("scheduled_date", { ascending: false });
+        .from("tasks")
+        .select("id, status")
+        .eq("company_id", companyId);
 
       if (error) {
-        console.error("Error fetching health checkups:", error);
-        // Use mock data if table doesn't exist yet
-        setHealthCheckups([
-          { status: "planned", count: 15 },
-          { status: "due", count: 8 },
-          { status: "completed", count: 42 },
-          { status: "cancelled", count: 3 },
+        console.error("Error fetching task stats:", error);
+        // Set empty state if error
+        setTaskStats([
+          { status: "Pending", count: 0, color: "#3b82f6", percent: 0 },
+          { status: "In Progress", count: 0, color: "#f59e0b", percent: 0 },
+          { status: "Completed", count: 0, color: "#10b981", percent: 0 },
+          { status: "Cancelled", count: 0, color: "#ef4444", percent: 0 },
         ]);
         return;
       }
 
-      // Group by status
+      // Group by status (task_status enum: pending, in_progress, completed, cancelled)
       const statusCounts = {
-        planned: 0,
-        due: 0,
+        pending: 0,
+        in_progress: 0,
         completed: 0,
         cancelled: 0,
       };
 
-      data?.forEach((record: any) => {
-        if (record.status in statusCounts) {
-          statusCounts[record.status as keyof typeof statusCounts]++;
+      data?.forEach((task: any) => {
+        if (task.status in statusCounts) {
+          statusCounts[task.status as keyof typeof statusCounts]++;
         }
       });
 
-      setHealthCheckups([
-        { status: "Planned", count: statusCounts.planned, color: "#3b82f6" },
-        { status: "Due", count: statusCounts.due, color: "#f59e0b" },
+      const total =
+        statusCounts.pending +
+        statusCounts.in_progress +
+        statusCounts.completed +
+        statusCounts.cancelled;
+      setTaskStats([
+        {
+          status: "Pending",
+          count: statusCounts.pending,
+          color: "#3b82f6",
+          percent: statusCounts.pending / (total || 1),
+        },
+        {
+          status: "In Progress",
+          count: statusCounts.in_progress,
+          color: "#f59e0b",
+          percent: statusCounts.in_progress / (total || 1),
+        },
         {
           status: "Completed",
           count: statusCounts.completed,
-          color: "#22c55e",
+          color: "#10b981",
+          percent: statusCounts.completed / (total || 1),
         },
         {
           status: "Cancelled",
           count: statusCounts.cancelled,
           color: "#ef4444",
+          percent: statusCounts.cancelled / (total || 1),
         },
       ]);
     } catch (error) {
-      console.error("Error fetching health checkups:", error);
-      // Use mock data
-      setHealthCheckups([
-        { status: "Planned", count: 15, color: "#3b82f6" },
-        { status: "Due", count: 8, color: "#f59e0b" },
-        { status: "Completed", count: 42, color: "#22c55e" },
-        { status: "Cancelled", count: 3, color: "#ef4444" },
+      console.error("Error fetching task stats:", error);
+      // Set empty state on error
+      setTaskStats([
+        { status: "Pending", count: 0, color: "#3b82f6", percent: 0 },
+        { status: "In Progress", count: 0, color: "#f59e0b", percent: 0 },
+        { status: "Completed", count: 0, color: "#10b981", percent: 0 },
+        { status: "Cancelled", count: 0, color: "#ef4444", percent: 0 },
       ]);
     }
   };
@@ -259,11 +283,7 @@ export default function Dashboard() {
     if (!companyId) return;
 
     try {
-      const statusFilter = showCompletedTasks
-        ? "completed"
-        : ["pending", "in_progress"];
-
-      const { data, error } = await supabase
+      let query = supabase
         .from("tasks")
         .select(
           `
@@ -273,25 +293,43 @@ export default function Dashboard() {
           status,
           priority,
           assigned_to,
-          employees (
+          assigned_employee:employees!tasks_assigned_to_fkey (
             id,
             full_name
           )
         `
         )
-        .eq("company_id", companyId)
-        .in(
-          "status",
-          Array.isArray(statusFilter) ? statusFilter : [statusFilter]
-        )
-        .order("due_date", { ascending: true })
-        .limit(10);
+        .eq("company_id", companyId);
 
-      if (error) throw error;
+      // Apply status filter based on dropdown selection
+      if (taskStatusFilter === "upcoming") {
+        query = query.in("status", ["pending", "in_progress"]);
+      } else if (taskStatusFilter === "completed") {
+        query = query.eq("status", "completed");
+      } else if (taskStatusFilter === "pending") {
+        query = query.eq("status", "pending");
+      } else if (taskStatusFilter === "in_progress") {
+        query = query.eq("status", "in_progress");
+      }
+      // "all" filter means no status filtering
+
+      const { data, error } = await query
+        .order("due_date", { ascending: true })
+        .limit(20);
+
+      if (error) {
+        console.error("Error fetching tasks:", error);
+        throw error;
+      }
+
+      console.log("Fetched tasks data:", data);
+      console.log("Current task status filter:", taskStatusFilter);
+      console.log("Number of tasks found:", data?.length || 0);
 
       setTasks(data || []);
     } catch (error) {
-      console.error("Error fetching tasks:", error);
+      console.error("Error in fetchTasks:", error);
+      setTasks([]);
     }
   };
 
@@ -299,7 +337,7 @@ export default function Dashboard() {
     try {
       const newStatus = currentStatus === "completed" ? "pending" : "completed";
 
-      const { error } = await supabase
+      const { error } = await (supabase as any)
         .from("tasks")
         .update({ status: newStatus })
         .eq("id", taskId);
@@ -313,24 +351,23 @@ export default function Dashboard() {
     }
   };
 
-  const fetchRecentAlerts = async () => {
-    if (!companyId) return;
+  const fetchRecentHazards = async (): Promise<number> => {
+    if (!companyId) return 0;
 
     try {
-      // Get recent high-priority tasks or overdue items
-      const { data: tasks, error } = await supabase
-        .from("tasks")
-        .select("id, title, due_date, status, priority")
+      const sevenDaysAgo = new Date();
+      sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+
+      const { count } = await supabase
+        .from("risk_assessments")
+        .select("id", { count: "exact", head: true })
         .eq("company_id", companyId)
-        .in("status", ["pending", "in_progress"])
-        .order("due_date", { ascending: true })
-        .limit(5);
+        .gte("created_at", sevenDaysAgo.toISOString());
 
-      if (error) throw error;
-
-      setRecentAlerts(tasks || []);
+      return count || 0;
     } catch (error) {
-      console.error("Error fetching alerts:", error);
+      console.error("Error fetching recent hazards:", error);
+      return 0;
     }
   };
 
@@ -358,10 +395,12 @@ export default function Dashboard() {
       <div className="mb-6 sm:mb-8 flex flex-col sm:flex-row items-start justify-between gap-4">
         <div>
           <h2 className="text-2xl sm:text-3xl font-bold mb-2">
-            {companyName ? `${companyName} Dashboard` : "Company Dashboard"}
+            {companyName
+              ? `${companyName} ${t("dashboard.title")}`
+              : `${t("dashboard.title")}`}
           </h2>
           <p className="text-sm sm:text-base text-muted-foreground">
-            Welcome back! Here's your safety management overview.
+            {t("dashboard.welcome")}
           </p>
         </div>
 
@@ -369,7 +408,7 @@ export default function Dashboard() {
         {user && !companyId && (
           <div className="ml-4">
             <Button onClick={() => navigate("/setup-company")}>
-              Set Up Company
+              {t("dashboard.setupCompany")}
             </Button>
           </div>
         )}
@@ -384,9 +423,9 @@ export default function Dashboard() {
           <div className="space-y-6">
             <Card>
               <CardHeader>
-                <CardTitle>Super Admin Dashboard</CardTitle>
+                <CardTitle>{t("superadmin.dashboard")}</CardTitle>
                 <CardDescription>
-                  Manage companies and subscriptions
+                  {t("superadmin.manageSubscriptions")}
                 </CardDescription>
               </CardHeader>
               <CardContent>
@@ -396,7 +435,7 @@ export default function Dashboard() {
                     className="w-full justify-start"
                   >
                     <Users className="w-4 h-4 mr-2" />
-                    Manage Companies
+                    {t("superadmin.manageCompanies")}
                   </Button>
                   <Button
                     onClick={() => navigate("/super-admin/dashboard")}
@@ -404,7 +443,7 @@ export default function Dashboard() {
                     variant="outline"
                   >
                     <BarChart className="w-4 h-4 mr-2" />
-                    View Analytics
+                    {t("superadmin.viewAnalytics")}
                   </Button>
                 </div>
               </CardContent>
@@ -414,53 +453,57 @@ export default function Dashboard() {
       ) : (
         <>
           {/* Stats Grid */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 mb-6 sm:mb-8">
-            <Card className="border-0 shadow-sm bg-white dark:bg-card">
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                  Total Employees
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 mb-6 sm:mb-8">
+            <Card className="border-0 shadow-xl bg-gradient-to-br from-blue-500 via-blue-600 to-blue-700 text-white overflow-hidden relative group hover:shadow-2xl transition-all duration-300 hover:-translate-y-1">
+              <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -mr-16 -mt-16 group-hover:scale-110 transition-transform duration-300"></div>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3 relative z-10">
+                <CardTitle className="text-sm font-semibold text-white/90 tracking-wide">
+                  {t("dashboard.totalEmployees")}
                 </CardTitle>
-                <div className="w-12 h-12 rounded-xl bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center">
-                  <Users className="h-6 w-6 text-blue-600 dark:text-blue-400" />
+                <div className="w-14 h-14 rounded-2xl bg-white/25 backdrop-blur-md flex items-center justify-center shadow-lg ring-2 ring-white/30 group-hover:scale-110 group-hover:rotate-6 transition-all duration-300">
+                  <Users className="h-7 w-7 text-white drop-shadow-md" />
                 </div>
               </CardHeader>
-              <CardContent>
-                <div className="text-4xl font-bold text-gray-900 dark:text-white">
+              <CardContent className="relative z-10">
+                <div className="text-5xl font-bold text-white mb-1 tracking-tight">
                   {stats.employees}
                 </div>
-                <p className="text-sm text-green-600 dark:text-green-400 mt-2 flex items-center gap-1">
-                  <span>📈 +5 this month</span>
+                <p className="text-sm text-blue-100 mt-3 flex items-center gap-1.5 font-medium">
+                  <span className="text-base">📈</span>
+                  <span>{t("dashboard.thisMonth")}</span>
                 </p>
               </CardContent>
             </Card>
 
-            <Card className="border-0 shadow-sm bg-white dark:bg-card">
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                  Overdue HSE Obligations
+            <Card className="border-0 shadow-xl bg-gradient-to-br from-red-500 via-red-600 to-red-700 text-white overflow-hidden relative group hover:shadow-2xl transition-all duration-300 hover:-translate-y-1">
+              <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -mr-16 -mt-16 group-hover:scale-110 transition-transform duration-300"></div>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3 relative z-10">
+                <CardTitle className="text-sm font-semibold text-white/90 tracking-wide">
+                  {t("dashboard.overdueObligations")}
                 </CardTitle>
-                <div className="w-12 h-12 rounded-xl bg-red-100 dark:bg-red-900/30 flex items-center justify-center">
-                  <AlertTriangle className="h-6 w-6 text-red-600 dark:text-red-400" />
+                <div className="w-14 h-14 rounded-2xl bg-white/25 backdrop-blur-md flex items-center justify-center shadow-lg ring-2 ring-white/30 group-hover:scale-110 group-hover:rotate-6 transition-all duration-300">
+                  <AlertTriangle className="h-7 w-7 text-white drop-shadow-md" />
                 </div>
               </CardHeader>
-              <CardContent>
-                <div className="text-4xl font-bold text-gray-900 dark:text-white">
+              <CardContent className="relative z-10">
+                <div className="text-5xl font-bold text-white mb-1 tracking-tight">
                   {stats.overdueObligations}
                 </div>
-                <p className="text-sm text-red-600 dark:text-red-400 mt-2">
-                  <span>⚠️ Needs attention</span>
+                <p className="text-sm text-red-100 mt-3 font-medium">
+                  <span>{t("dashboard.needsAttention")}</span>
                 </p>
               </CardContent>
             </Card>
 
-            <Card className="border-0 shadow-sm bg-white dark:bg-card">
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                  Last 7 Days: Incidents
+            <Card className="border-0 shadow-xl bg-gradient-to-br from-amber-500 via-orange-500 to-orange-600 text-white overflow-hidden relative group hover:shadow-2xl transition-all duration-300 hover:-translate-y-1">
+              <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -mr-16 -mt-16 group-hover:scale-110 transition-transform duration-300"></div>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3 relative z-10">
+                <CardTitle className="text-sm font-semibold text-white/90 tracking-wide">
+                  {t("dashboard.last7Days")}: {t("dashboard.incidents")}
                 </CardTitle>
-                <div className="w-12 h-12 rounded-xl bg-amber-100 dark:bg-amber-900/30 flex items-center justify-center">
+                <div className="w-14 h-14 rounded-2xl bg-white/25 backdrop-blur-md flex items-center justify-center shadow-lg ring-2 ring-white/30 group-hover:scale-110 group-hover:rotate-6 transition-all duration-300">
                   <svg
-                    className="h-6 w-6 text-amber-600 dark:text-amber-400"
+                    className="h-7 w-7 text-white drop-shadow-md"
                     fill="none"
                     stroke="currentColor"
                     viewBox="0 0 24 24"
@@ -474,12 +517,32 @@ export default function Dashboard() {
                   </svg>
                 </div>
               </CardHeader>
-              <CardContent>
-                <div className="text-4xl font-bold text-gray-900 dark:text-white">
+              <CardContent className="relative z-10">
+                <div className="text-5xl font-bold text-white mb-1 tracking-tight">
                   {stats.recentIncidents}
                 </div>
-                <p className="text-sm text-amber-600 dark:text-amber-400 mt-2">
-                  <span>📊 New reports</span>
+                <p className="text-sm text-amber-100 mt-3 font-medium">
+                  <span>{t("dashboard.newReports")}</span>
+                </p>
+              </CardContent>
+            </Card>
+
+            <Card className="border-0 shadow-xl bg-gradient-to-br from-green-500 via-green-600 to-emerald-700 text-white overflow-hidden relative group hover:shadow-2xl transition-all duration-300 hover:-translate-y-1">
+              <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -mr-16 -mt-16 group-hover:scale-110 transition-transform duration-300"></div>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3 relative z-10">
+                <CardTitle className="text-sm font-semibold text-white/90 tracking-wide">
+                  {t("dashboard.last7Days")}: {t("dashboard.hazards")}
+                </CardTitle>
+                <div className="w-14 h-14 rounded-2xl bg-white/25 backdrop-blur-md flex items-center justify-center shadow-lg ring-2 ring-white/30 group-hover:scale-110 group-hover:rotate-6 transition-all duration-300">
+                  <Shield className="h-7 w-7 text-white drop-shadow-md" />
+                </div>
+              </CardHeader>
+              <CardContent className="relative z-10">
+                <div className="text-5xl font-bold text-white mb-1 tracking-tight">
+                  {stats.recentHazards}
+                </div>
+                <p className="text-sm text-green-100 mt-3 font-medium">
+                  <span>{t("dashboard.newReports")}</span>
                 </p>
               </CardContent>
             </Card>
@@ -487,61 +550,88 @@ export default function Dashboard() {
 
           {/* Dashboard Widgets */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6 mb-6 sm:mb-8">
-            {/* Health Check-ups Chart */}
+            {/* Task Statistics Chart */}
             <Card className="border-0 shadow-sm">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
-                  <svg
-                    className="w-5 h-5"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"
-                    />
-                  </svg>
-                  Health Check-ups
+                  <ListTodo className="w-5 h-5" />
+                  Task Statistics
                 </CardTitle>
                 <CardDescription>
-                  Status of employee health assessments
+                  Overview of all task completion status
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                <ResponsiveContainer width="100%" height={300}>
-                  <PieChart>
-                    <Pie
-                      data={healthCheckups}
-                      cx="50%"
-                      cy="50%"
-                      labelLine={false}
-                      label={({ status, count }) => `${status}: ${count}`}
-                      outerRadius={80}
-                      fill="#8884d8"
-                      dataKey="count"
-                    >
-                      {healthCheckups.map((entry, index) => (
-                        <Cell key={`cell-${index}`} fill={entry.color} />
-                      ))}
-                    </Pie>
-                    <Tooltip />
-                  </PieChart>
-                </ResponsiveContainer>
+                {taskStats.reduce((sum, item) => sum + item.count, 0) === 0 ? (
+                  <div className="flex items-center justify-center h-[300px] text-muted-foreground">
+                    No tasks found
+                  </div>
+                ) : (
+                  <ResponsiveContainer width="100%" height={300}>
+                    <PieChart>
+                      <Pie
+                        data={taskStats}
+                        cx="50%"
+                        cy="50%"
+                        labelLine={true}
+                        label={(entry) => {
+                          return `${entry.status}: ${entry.count} (${(
+                            entry.percent * 100
+                          ).toFixed(0)}%)`;
+                        }}
+                        outerRadius={80}
+                        innerRadius={0}
+                        fill="#8884d8"
+                        dataKey="count"
+                        stroke="#fff"
+                        strokeWidth={2}
+                      >
+                        {taskStats.map((entry, index) => (
+                          <Cell key={`cell-${index}`} fill={entry.color} />
+                        ))}
+                      </Pie>
+                      <Tooltip
+                        formatter={(value: any, name: any, props: any) => {
+                          return [
+                            `${value} (${(
+                              (value /
+                                taskStats.reduce(
+                                  (sum, item) => sum + item.count,
+                                  0
+                                )) *
+                              100
+                            ).toFixed(1)}%)`,
+                            props.payload.status,
+                          ];
+                        }}
+                      />
+                      <Legend
+                        verticalAlign="bottom"
+                        height={36}
+                        formatter={(value, entry: any) => {
+                          return `${entry.payload.status}: ${entry.payload.count}`;
+                        }}
+                      />
+                    </PieChart>
+                  </ResponsiveContainer>
+                )}
                 <div className="grid grid-cols-2 gap-3 mt-4">
-                  {healthCheckups.map((item, index) => (
-                    <div key={index} className="flex items-center gap-2">
-                      <div
-                        className="w-3 h-3 rounded-full"
-                        style={{ backgroundColor: item.color }}
-                      ></div>
-                      <span className="text-sm text-muted-foreground">
-                        {item.status}: {item.count}
-                      </span>
-                    </div>
-                  ))}
+                  {taskStats.map((item, index) => {
+                    return (
+                      <div key={index} className="flex items-center gap-2">
+                        <div
+                          className="w-3 h-3 rounded-full"
+                          style={{ backgroundColor: item.color }}
+                        ></div>
+                        <span
+                          className="text-sm font-medium"
+                          style={{ color: item.color }}
+                        >
+                          {item.status}: {item.count}
+                        </span>
+                      </div>
+                    );
+                  })}
                 </div>
               </CardContent>
             </Card>
@@ -553,74 +643,143 @@ export default function Dashboard() {
                   <div>
                     <CardTitle className="flex items-center gap-2">
                       <ListTodo className="w-5 h-5" />
-                      Task Overview
+                      {t("dashboard.taskOverview")}
                     </CardTitle>
                     <CardDescription>
-                      {showCompletedTasks
-                        ? "Completed tasks"
-                        : "Upcoming tasks"}
+                      {taskStatusFilter === "upcoming"
+                        ? t("dashboard.upcomingTasks")
+                        : taskStatusFilter === "completed"
+                        ? t("dashboard.completedTasks")
+                        : taskStatusFilter === "all"
+                        ? "All tasks"
+                        : taskStatusFilter === "pending"
+                        ? "Pending tasks"
+                        : "In progress tasks"}
                     </CardDescription>
                   </div>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setShowCompletedTasks(!showCompletedTasks)}
+                  <Select
+                    value={taskStatusFilter}
+                    onValueChange={setTaskStatusFilter}
                   >
-                    {showCompletedTasks ? "Show Upcoming" : "Show Completed"}
-                  </Button>
+                    <SelectTrigger className="w-[180px]">
+                      <SelectValue placeholder="Filter tasks" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="upcoming">Upcoming</SelectItem>
+                      <SelectItem value="completed">Completed</SelectItem>
+                      <SelectItem value="all">All Tasks</SelectItem>
+                      <SelectItem value="pending">Pending</SelectItem>
+                      <SelectItem value="in_progress">In Progress</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
               </CardHeader>
               <CardContent>
                 <ScrollArea className="h-[300px] pr-4">
                   {tasks.length === 0 ? (
-                    <div className="flex items-center justify-center h-full text-muted-foreground">
-                      No {showCompletedTasks ? "completed" : "upcoming"} tasks
+                    <div className="flex flex-col items-center justify-center h-full text-muted-foreground">
+                      <ListTodo className="w-12 h-12 mb-3 opacity-20" />
+                      <p className="text-sm">
+                        {t("dashboard.noTasks")} (
+                        {taskStatusFilter === "upcoming"
+                          ? t("dashboard.upcomingTasks").toLowerCase()
+                          : taskStatusFilter === "completed"
+                          ? t("dashboard.completedTasks").toLowerCase()
+                          : taskStatusFilter === "all"
+                          ? "all tasks"
+                          : taskStatusFilter === "pending"
+                          ? "pending tasks"
+                          : "in progress tasks"}
+                        )
+                      </p>
                     </div>
                   ) : (
-                    <div className="space-y-3">
+                    <div className="space-y-2">
                       {tasks.map((task: any) => (
                         <div
                           key={task.id}
-                          className="flex items-start gap-3 p-3 rounded-lg bg-muted/50 hover:bg-muted transition-colors"
+                          className="group relative flex items-start gap-3 p-4 rounded-xl bg-gradient-to-br from-muted/30 to-muted/50 hover:from-muted/50 hover:to-muted/70 border border-border/50 hover:border-border transition-all duration-200 hover:shadow-md"
                         >
-                          <input
-                            type="checkbox"
-                            checked={task.status === "completed"}
-                            onChange={() =>
-                              toggleTaskStatus(task.id, task.status)
-                            }
-                            className="mt-1 h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary cursor-pointer"
-                          />
+                          {/* Custom Checkbox */}
+                          <div className="relative flex items-center justify-center mt-0.5">
+                            <input
+                              type="checkbox"
+                              checked={task.status === "completed"}
+                              onChange={() =>
+                                toggleTaskStatus(task.id, task.status)
+                              }
+                              className="peer h-5 w-5 cursor-pointer appearance-none rounded-md border-2 border-muted-foreground/30 bg-background checked:bg-primary checked:border-primary transition-all duration-200 hover:border-primary/50"
+                            />
+                            <CheckCircle className="absolute w-3.5 h-3.5 text-primary-foreground opacity-0 peer-checked:opacity-100 transition-opacity pointer-events-none" />
+                          </div>
+
+                          {/* Task Content */}
                           <div className="flex-1 min-w-0">
-                            <Link
-                              to={`/employees/${task.assigned_to}`}
-                              className="font-medium text-sm hover:text-primary hover:underline"
+                            <p
+                              className={`font-semibold text-sm mb-1.5 ${
+                                task.status === "completed"
+                                  ? "line-through text-muted-foreground"
+                                  : ""
+                              }`}
                             >
                               {task.title}
-                            </Link>
-                            {task.employees && (
-                              <p className="text-xs text-muted-foreground mt-1">
-                                Assigned to:{" "}
-                                {task.employees.full_name || "Unassigned"}
-                              </p>
-                            )}
-                            {task.due_date && (
-                              <p className="text-xs text-muted-foreground">
-                                Due:{" "}
-                                {new Date(task.due_date).toLocaleDateString()}
-                              </p>
-                            )}
+                            </p>
+
+                            <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted-foreground">
+                              {/* Assigned To */}
+                              {task.assigned_employee ? (
+                                <div className="flex items-center gap-1">
+                                  <Users className="w-3 h-3" />
+                                  <Link
+                                    to={`/employees/${task.assigned_to}`}
+                                    className="hover:text-primary hover:underline transition-colors"
+                                  >
+                                    {task.assigned_employee.full_name}
+                                  </Link>
+                                </div>
+                              ) : (
+                                <div className="flex items-center gap-1">
+                                  <Users className="w-3 h-3" />
+                                  <span>{t("dashboard.unassigned")}</span>
+                                </div>
+                              )}
+
+                              {/* Due Date */}
+                              {task.due_date && (
+                                <div className="flex items-center gap-1">
+                                  <Clock className="w-3 h-3" />
+                                  <span>
+                                    {new Date(
+                                      task.due_date
+                                    ).toLocaleDateString()}
+                                  </span>
+                                </div>
+                              )}
+                            </div>
                           </div>
+
+                          {/* Priority Badge */}
                           {task.priority && (
                             <Badge
                               variant={
-                                task.priority === "high"
+                                task.priority === "high" ||
+                                task.priority === "urgent"
                                   ? "destructive"
+                                  : task.priority === "medium"
+                                  ? "default"
                                   : "secondary"
                               }
-                              className="text-xs"
+                              className="text-xs font-semibold px-2.5 py-0.5 flex items-center gap-1"
                             >
-                              {task.priority}
+                              {task.priority === "high" ||
+                              task.priority === "urgent" ? (
+                                <AlertTriangle className="w-3 h-3" />
+                              ) : task.priority === "medium" ? (
+                                <span className="w-1.5 h-1.5 rounded-full bg-current"></span>
+                              ) : (
+                                <span className="w-1.5 h-1.5 rounded-full bg-current opacity-60"></span>
+                              )}
+                              {t(`dashboard.${task.priority}`)}
                             </Badge>
                           )}
                         </div>
@@ -631,51 +790,6 @@ export default function Dashboard() {
               </CardContent>
             </Card>
           </div>
-
-          {/* Recent Alerts */}
-          {recentAlerts.length > 0 && (
-            <Card className="border-0 shadow-sm mb-6 sm:mb-8">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Bell className="w-5 h-5" />
-                  Recent Alerts
-                </CardTitle>
-                <CardDescription>Upcoming or overdue tasks</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-3">
-                  {recentAlerts.map((alert) => (
-                    <div
-                      key={alert.id}
-                      className="flex items-center justify-between p-3 rounded-lg bg-amber-50 dark:bg-amber-900/10 border border-amber-200 dark:border-amber-800"
-                    >
-                      <div className="flex items-center gap-3">
-                        <AlertTriangle className="w-5 h-5 text-amber-600" />
-                        <div>
-                          <p className="font-medium text-sm">{alert.title}</p>
-                          <p className="text-xs text-muted-foreground">
-                            Due:{" "}
-                            {alert.due_date
-                              ? new Date(alert.due_date).toLocaleDateString()
-                              : "Not set"}
-                          </p>
-                        </div>
-                      </div>
-                      <Badge
-                        variant={
-                          alert.priority === "high"
-                            ? "destructive"
-                            : "secondary"
-                        }
-                      >
-                        {alert.priority || "normal"}
-                      </Badge>
-                    </div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
-          )}
         </>
       )}
     </div>

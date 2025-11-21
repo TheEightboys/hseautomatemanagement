@@ -1,7 +1,16 @@
 import { useEffect, useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
+import { useLanguage } from "@/contexts/LanguageContext";
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft, Plus, Search } from "lucide-react";
+import {
+  ArrowLeft,
+  Plus,
+  Search,
+  ClipboardCheck,
+  CheckCircle,
+  Clock,
+  Calendar,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -64,6 +73,7 @@ type AuditFormData = z.infer<typeof auditSchema>;
 
 export default function Audits() {
   const { user, loading, companyId } = useAuth();
+  const { t } = useLanguage();
   const navigate = useNavigate();
   const { toast } = useToast();
   type AuditWithJoins = Tables<"audits"> & {
@@ -157,18 +167,21 @@ export default function Audits() {
     });
 
     try {
-      const { data: insertedData, error } = await supabase.from("audits").insert([
-        {
-          title: data.title,
-          audit_category_id: data.audit_category_id || null,
-          department_id: data.department_id || null,
-          scheduled_date: data.scheduled_date,
-          status: data.status,
-          findings: data.findings || null,
-          deficiencies_found: data.deficiencies_found,
-          company_id: companyId,
-        },
-      ]).select();
+      const { data: insertedData, error } = await (supabase as any)
+        .from("audits")
+        .insert([
+          {
+            title: data.title,
+            audit_category_id: data.audit_category_id || null,
+            department_id: data.department_id || null,
+            scheduled_date: data.scheduled_date,
+            status: data.status,
+            findings: data.findings || null,
+            deficiencies_found: data.deficiencies_found,
+            company_id: companyId,
+          } as any,
+        ])
+        .select();
 
       if (error) {
         console.error("Audit creation error:", error);
@@ -176,9 +189,9 @@ export default function Audits() {
       }
 
       console.log("Audit created successfully:", insertedData);
-      toast({ 
-        title: "Success", 
-        description: "Audit created successfully! 🎉" 
+      toast({
+        title: "Success",
+        description: "Audit created successfully! 🎉",
       });
       setIsDialogOpen(false);
       form.reset({
@@ -191,15 +204,17 @@ export default function Audits() {
       const e = err as { message?: string; code?: string } | Error | null;
       const message =
         e && "message" in e && e.message ? e.message : String(err);
-      
+
       // Provide helpful error messages
       let description = message;
       if (message.includes("row-level security")) {
-        description = "Permission denied. Please ensure you're logged in and have a company assigned. Try signing out and back in.";
+        description =
+          "Permission denied. Please ensure you're logged in and have a company assigned. Try signing out and back in.";
       } else if (message.includes("violates foreign key")) {
-        description = "Invalid reference. Please check that the selected department/category exists.";
+        description =
+          "Invalid reference. Please check that the selected department/category exists.";
       }
-      
+
       toast({
         title: "Error creating audit",
         description,
@@ -244,33 +259,40 @@ export default function Audits() {
               <ArrowLeft className="w-5 h-5" />
             </Button>
             <div>
-              <h1 className="text-xl font-bold">Audits</h1>
-              <p className="text-xs text-muted-foreground">Safety Audits</p>
+              <h1 className="text-xl font-bold">{t("audits.title")}</h1>
+              <p className="text-xs text-muted-foreground">
+                {t("audits.subtitle")}
+              </p>
             </div>
           </div>
         </div>
       </header>
 
       <main className="container mx-auto px-4 py-8">
-        <Card>
+        <Card className="border-0 shadow-xl">
           <CardHeader>
             <div className="flex items-center justify-between">
-              <div>
-                <CardTitle>Audits</CardTitle>
-                <CardDescription>
-                  Schedule and conduct safety audits
-                </CardDescription>
+              <div className="flex items-center gap-3">
+                <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-cyan-500 to-blue-600 flex items-center justify-center shadow-lg">
+                  <ClipboardCheck className="w-6 h-6 text-white" />
+                </div>
+                <div>
+                  <CardTitle className="text-2xl">
+                    {t("audits.title")}
+                  </CardTitle>
+                  <CardDescription>{t("audits.subtitle")}</CardDescription>
+                </div>
               </div>
               <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
                 <DialogTrigger asChild>
                   <Button>
                     <Plus className="w-4 h-4 mr-2" />
-                    New Audit
+                    {t("audits.new")}
                   </Button>
                 </DialogTrigger>
                 <DialogContent className="max-w-2xl">
                   <DialogHeader>
-                    <DialogTitle>Create Audit</DialogTitle>
+                    <DialogTitle>{t("audits.new")}</DialogTitle>
                   </DialogHeader>
                   <Form {...form}>
                     <form
@@ -282,7 +304,7 @@ export default function Audits() {
                         name="title"
                         render={({ field }) => (
                           <FormItem>
-                            <FormLabel>Title</FormLabel>
+                            <FormLabel>{t("audits.auditTitle")}</FormLabel>
                             <FormControl>
                               <Input {...field} />
                             </FormControl>
@@ -297,14 +319,16 @@ export default function Audits() {
                           name="audit_category_id"
                           render={({ field }) => (
                             <FormItem>
-                              <FormLabel>Audit Category</FormLabel>
+                              <FormLabel>{t("audits.category")}</FormLabel>
                               <Select
                                 onValueChange={field.onChange}
                                 value={field.value}
                               >
                                 <FormControl>
                                   <SelectTrigger>
-                                    <SelectValue placeholder="Select category" />
+                                    <SelectValue
+                                      placeholder={t("audits.selectCategory")}
+                                    />
                                   </SelectTrigger>
                                 </FormControl>
                                 <SelectContent>
@@ -325,14 +349,16 @@ export default function Audits() {
                           name="department_id"
                           render={({ field }) => (
                             <FormItem>
-                              <FormLabel>Department</FormLabel>
+                              <FormLabel>{t("audits.department")}</FormLabel>
                               <Select
                                 onValueChange={field.onChange}
                                 value={field.value}
                               >
                                 <FormControl>
                                   <SelectTrigger>
-                                    <SelectValue placeholder="Select department" />
+                                    <SelectValue
+                                      placeholder={t("audits.selectDepartment")}
+                                    />
                                   </SelectTrigger>
                                 </FormControl>
                                 <SelectContent>
@@ -355,7 +381,7 @@ export default function Audits() {
                           name="scheduled_date"
                           render={({ field }) => (
                             <FormItem>
-                              <FormLabel>Scheduled Date</FormLabel>
+                              <FormLabel>{t("audits.scheduledDate")}</FormLabel>
                               <FormControl>
                                 <Input type="date" {...field} />
                               </FormControl>
@@ -369,7 +395,7 @@ export default function Audits() {
                           name="status"
                           render={({ field }) => (
                             <FormItem>
-                              <FormLabel>Status</FormLabel>
+                              <FormLabel>{t("audits.status")}</FormLabel>
                               <Select
                                 onValueChange={field.onChange}
                                 value={field.value}
@@ -381,13 +407,13 @@ export default function Audits() {
                                 </FormControl>
                                 <SelectContent>
                                   <SelectItem value="planned">
-                                    Planned
+                                    {t("audits.planned")}
                                   </SelectItem>
                                   <SelectItem value="in_progress">
-                                    In Progress
+                                    {t("audits.inProgress")}
                                   </SelectItem>
                                   <SelectItem value="completed">
-                                    Completed
+                                    {t("audits.completed")}
                                   </SelectItem>
                                 </SelectContent>
                               </Select>
@@ -402,7 +428,7 @@ export default function Audits() {
                         name="deficiencies_found"
                         render={({ field }) => (
                           <FormItem>
-                            <FormLabel>Deficiencies Found</FormLabel>
+                            <FormLabel>{t("audits.deficiencies")}</FormLabel>
                             <FormControl>
                               <Input
                                 type="number"
@@ -422,7 +448,7 @@ export default function Audits() {
                         name="findings"
                         render={({ field }) => (
                           <FormItem>
-                            <FormLabel>Findings</FormLabel>
+                            <FormLabel>{t("audits.findings")}</FormLabel>
                             <FormControl>
                               <Textarea {...field} rows={4} />
                             </FormControl>
@@ -437,9 +463,11 @@ export default function Audits() {
                           variant="outline"
                           onClick={() => setIsDialogOpen(false)}
                         >
-                          Cancel
+                          {t("common.cancel")}
                         </Button>
-                        <Button type="submit">Create Audit</Button>
+                        <Button type="submit">
+                          {t("common.create")} {t("audits.title").slice(0, -1)}
+                        </Button>
                       </div>
                     </form>
                   </Form>
@@ -448,14 +476,14 @@ export default function Audits() {
             </div>
           </CardHeader>
           <CardContent>
-            <div className="mb-4">
+            <div className="mb-6">
               <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
+                <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-muted-foreground w-5 h-5" />
                 <Input
-                  placeholder="Search audits..."
+                  placeholder={t("audits.search")}
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-10"
+                  className="pl-12 h-12 border-2 focus:border-primary transition-colors"
                 />
               </div>
             </div>
@@ -464,28 +492,36 @@ export default function Audits() {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Title</TableHead>
-                    <TableHead>Category</TableHead>
-                    <TableHead>Department</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Scheduled Date</TableHead>
-                    <TableHead>Auditor</TableHead>
-                    <TableHead>Deficiencies</TableHead>
+                    <TableHead>{t("audits.auditTitle")}</TableHead>
+                    <TableHead>{t("audits.category")}</TableHead>
+                    <TableHead>{t("audits.department")}</TableHead>
+                    <TableHead>{t("audits.status")}</TableHead>
+                    <TableHead>{t("audits.scheduledDate")}</TableHead>
+                    <TableHead>{t("common.by")}</TableHead>
+                    <TableHead>{t("audits.deficiencies")}</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {filteredAudits.length === 0 ? (
                     <TableRow>
-                      <TableCell
-                        colSpan={7}
-                        className="text-center py-8 text-muted-foreground"
-                      >
-                        No audits found
+                      <TableCell colSpan={7} className="text-center py-12">
+                        <div className="flex flex-col items-center justify-center">
+                          <ClipboardCheck className="w-16 h-16 text-muted-foreground/20 mb-4" />
+                          <p className="text-lg font-medium text-muted-foreground mb-1">
+                            No audits found
+                          </p>
+                          <p className="text-sm text-muted-foreground/60">
+                            Create your first audit to get started
+                          </p>
+                        </div>
                       </TableCell>
                     </TableRow>
                   ) : (
                     filteredAudits.map((audit) => (
-                      <TableRow key={audit.id}>
+                      <TableRow
+                        key={audit.id}
+                        className="hover:bg-muted/70 transition-all duration-200 border-b border-border/50 hover:shadow-sm group"
+                      >
                         <TableCell className="font-medium">
                           {audit.title}
                         </TableCell>
@@ -494,18 +530,30 @@ export default function Audits() {
                         </TableCell>
                         <TableCell>{audit.departments?.name || "-"}</TableCell>
                         <TableCell>
-                          <Badge variant={getStatusColor(audit.status)}>
-                            {audit.status.replace("_", " ")}
+                          <Badge
+                            variant={getStatusColor(audit.status)}
+                            className="flex items-center gap-1 px-2.5 py-0.5 font-semibold w-fit"
+                          >
+                            {audit.status === "completed" && (
+                              <CheckCircle className="w-3 h-3" />
+                            )}
+                            {audit.status === "in_progress" && (
+                              <Clock className="w-3 h-3" />
+                            )}
+                            {audit.status === "planned" && (
+                              <Calendar className="w-3 h-3" />
+                            )}
+                            {t(`audits.${audit.status.replace("_", "")}`)}
                           </Badge>
                         </TableCell>
-                        <TableCell>{audit.scheduled_date}</TableCell>
+                        <TableCell>{(audit as any).scheduled_date}</TableCell>
                         <TableCell>
                           {audit.employees?.full_name || "-"}
                         </TableCell>
                         <TableCell>
-                          {audit.deficiencies_found > 0 ? (
+                          {(audit as any).deficiencies_found > 0 ? (
                             <Badge variant="destructive">
-                              {audit.deficiencies_found}
+                              {(audit as any).deficiencies_found}
                             </Badge>
                           ) : (
                             <span className="text-muted-foreground">0</span>

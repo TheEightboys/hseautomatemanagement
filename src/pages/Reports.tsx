@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
+import { useLanguage } from "@/contexts/LanguageContext";
 import { useNavigate } from "react-router-dom";
 import {
   ArrowLeft,
@@ -57,6 +58,7 @@ interface TrainingStatus {
 
 export default function Reports() {
   const { user, companyId, loading } = useAuth();
+  const { t } = useLanguage();
   const navigate = useNavigate();
   const { toast } = useToast();
 
@@ -106,22 +108,63 @@ export default function Reports() {
         openIncidentsRes,
         trainingRes,
       ] = await Promise.all([
-        supabase.from("employees").select("id", { count: "exact", head: true }).eq("company_id", companyId),
-        supabase.from("risk_assessments").select("id", { count: "exact", head: true }).eq("company_id", companyId),
-        supabase.from("audits").select("id", { count: "exact", head: true }).eq("company_id", companyId),
-        supabase.from("tasks").select("id", { count: "exact", head: true }).eq("company_id", companyId),
-        supabase.from("incidents" as any).select("id", { count: "exact", head: true }).eq("company_id", companyId),
-        supabase.from("measures" as any).select("id", { count: "exact", head: true }).eq("company_id", companyId),
-        supabase.from("audits").select("id", { count: "exact", head: true }).eq("company_id", companyId).eq("status", "completed"),
-        supabase.from("tasks").select("id", { count: "exact", head: true }).eq("company_id", companyId).eq("status", "completed"),
-        supabase.from("measures" as any).select("id", { count: "exact", head: true }).eq("company_id", companyId).eq("status", "completed"),
-        supabase.from("incidents" as any).select("id", { count: "exact", head: true }).eq("company_id", companyId).eq("investigation_status", "open"),
-        supabase.from("training_records").select("*").eq("company_id", companyId),
+        supabase
+          .from("employees")
+          .select("id", { count: "exact", head: true })
+          .eq("company_id", companyId),
+        supabase
+          .from("risk_assessments")
+          .select("id", { count: "exact", head: true })
+          .eq("company_id", companyId),
+        supabase
+          .from("audits")
+          .select("id", { count: "exact", head: true })
+          .eq("company_id", companyId),
+        supabase
+          .from("tasks")
+          .select("id", { count: "exact", head: true })
+          .eq("company_id", companyId),
+        supabase
+          .from("incidents" as any)
+          .select("id", { count: "exact", head: true })
+          .eq("company_id", companyId),
+        supabase
+          .from("measures" as any)
+          .select("id", { count: "exact", head: true })
+          .eq("company_id", companyId),
+        supabase
+          .from("audits")
+          .select("id", { count: "exact", head: true })
+          .eq("company_id", companyId)
+          .eq("status", "completed"),
+        supabase
+          .from("tasks")
+          .select("id", { count: "exact", head: true })
+          .eq("company_id", companyId)
+          .eq("status", "completed"),
+        supabase
+          .from("measures" as any)
+          .select("id", { count: "exact", head: true })
+          .eq("company_id", companyId)
+          .eq("status", "completed"),
+        supabase
+          .from("incidents" as any)
+          .select("id", { count: "exact", head: true })
+          .eq("company_id", companyId)
+          .eq("investigation_status", "open"),
+        supabase
+          .from("training_records")
+          .select("*")
+          .eq("company_id", companyId),
       ]);
 
       const totalTraining = trainingRes.data?.length || 0;
-      const completedTraining = trainingRes.data?.filter((t) => t.status === "completed").length || 0;
-      const trainingComplianceRate = totalTraining > 0 ? Math.round((completedTraining / totalTraining) * 100) : 0;
+      const completedTraining =
+        trainingRes.data?.filter((t) => t.status === "completed").length || 0;
+      const trainingComplianceRate =
+        totalTraining > 0
+          ? Math.round((completedTraining / totalTraining) * 100)
+          : 0;
 
       setStats({
         totalEmployees: employeesRes.count || 0,
@@ -172,9 +215,12 @@ export default function Reports() {
         if (trainError) throw trainError;
 
         const total = trainings?.length || 0;
-        const completed = trainings?.filter((t) => t.status === "completed").length || 0;
-        const expired = trainings?.filter((t) => t.status === "expired").length || 0;
-        const compliance = total > 0 ? Math.round((completed / total) * 100) : 0;
+        const completed =
+          trainings?.filter((t) => t.status === "completed").length || 0;
+        const expired =
+          trainings?.filter((t) => t.status === "expired").length || 0;
+        const compliance =
+          total > 0 ? Math.round((completed / total) * 100) : 0;
 
         matrix.push({
           employee_name: emp.full_name,
@@ -212,65 +258,84 @@ export default function Reports() {
         <div className="flex items-center gap-4">
           <Button variant="ghost" onClick={() => navigate("/dashboard")}>
             <ArrowLeft className="w-4 h-4 mr-2" />
-            Back
+            {t("common.back")}
           </Button>
-          <div>
-            <h2 className="text-3xl font-bold">HSE Reports & Analytics</h2>
-            <p className="text-muted-foreground">
-              Comprehensive compliance and performance dashboards
-            </p>
+        <div className="flex items-center gap-3">
+          <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center shadow-lg">
+            <BarChart3 className="w-6 h-6 text-white" />
           </div>
+          <div>
+            <h2 className="text-3xl font-bold">{t("reports.title")}</h2>
+            <p className="text-muted-foreground">{t("reports.subtitle")}</p>
+          </div>
+        </div>
         </div>
         <Button onClick={exportReport}>
           <Download className="w-4 h-4 mr-2" />
-          Export PDF
+          {t("reports.exportPDF")}
         </Button>
       </div>
 
       {/* Overview Statistics */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-        <Card>
+        <Card className="border-0 shadow-lg hover:shadow-xl transition-shadow duration-200">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Employees</CardTitle>
+            <CardTitle className="text-sm font-medium">
+              {t("reports.totalEmployees")}
+            </CardTitle>
             <Users className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{stats.totalEmployees}</div>
-            <p className="text-xs text-muted-foreground">Active workforce</p>
+            <p className="text-xs text-muted-foreground">
+              {t("reports.activeWorkforce")}
+            </p>
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="border-0 shadow-lg hover:shadow-xl transition-shadow duration-200">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Risk Assessments</CardTitle>
+            <CardTitle className="text-sm font-medium">
+              {t("reports.riskAssessments")}
+            </CardTitle>
             <AlertTriangle className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{stats.totalRiskAssessments}</div>
-            <p className="text-xs text-muted-foreground">Total GBU assessments</p>
+            <div className="text-2xl font-bold">
+              {stats.totalRiskAssessments}
+            </div>
+            <p className="text-xs text-muted-foreground">
+              {t("reports.totalGBU")}
+            </p>
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="border-0 shadow-lg hover:shadow-xl transition-shadow duration-200">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Safety Audits</CardTitle>
+            <CardTitle className="text-sm font-medium">
+              {t("reports.safetyAudits")}
+            </CardTitle>
             <FileText className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{stats.totalAudits}</div>
             <p className="text-xs text-muted-foreground">
-              {stats.completedAudits} completed
+              {stats.completedAudits} {t("reports.completed")}
             </p>
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="border-0 shadow-lg hover:shadow-xl transition-shadow duration-200">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Training Compliance</CardTitle>
+            <CardTitle className="text-sm font-medium">
+              {t("reports.trainingCompliance")}
+            </CardTitle>
             <CheckCircle className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{stats.trainingCompliance}%</div>
+            <div className="text-2xl font-bold">
+              {stats.trainingCompliance}%
+            </div>
             <Progress value={stats.trainingCompliance} className="mt-2" />
           </CardContent>
         </Card>
@@ -279,10 +344,12 @@ export default function Reports() {
       {/* Detailed Reports */}
       <Tabs defaultValue="overview" className="space-y-6">
         <TabsList>
-          <TabsTrigger value="overview">Overview</TabsTrigger>
-          <TabsTrigger value="training">Training Matrix</TabsTrigger>
-          <TabsTrigger value="incidents">Incidents</TabsTrigger>
-          <TabsTrigger value="measures">Measures</TabsTrigger>
+          <TabsTrigger value="overview">{t("reports.overview")}</TabsTrigger>
+          <TabsTrigger value="training">
+            {t("reports.trainingMatrix")}
+          </TabsTrigger>
+          <TabsTrigger value="incidents">{t("reports.incidents")}</TabsTrigger>
+          <TabsTrigger value="measures">{t("reports.measures")}</TabsTrigger>
         </TabsList>
 
         {/* Overview Tab */}
@@ -290,12 +357,14 @@ export default function Reports() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <Card>
               <CardHeader>
-                <CardTitle>Audit Completion Status</CardTitle>
-                <CardDescription>Safety audit performance metrics</CardDescription>
+                <CardTitle>{t("reports.auditCompletion")}</CardTitle>
+                <CardDescription>{t("reports.auditMetrics")}</CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="flex items-center justify-between">
-                  <span className="text-sm font-medium">Total Audits</span>
+                  <span className="text-sm font-medium">
+                    {t("reports.totalAudits")}
+                  </span>
                   <Badge>{stats.totalAudits}</Badge>
                 </div>
                 <div className="flex items-center justify-between">
@@ -308,7 +377,9 @@ export default function Reports() {
                   <span className="text-sm font-medium">Completion Rate</span>
                   <span className="text-sm font-bold">
                     {stats.totalAudits > 0
-                      ? Math.round((stats.completedAudits / stats.totalAudits) * 100)
+                      ? Math.round(
+                          (stats.completedAudits / stats.totalAudits) * 100
+                        )
                       : 0}
                     %
                   </span>
@@ -344,7 +415,9 @@ export default function Reports() {
                   <span className="text-sm font-medium">Completion Rate</span>
                   <span className="text-sm font-bold">
                     {stats.totalTasks > 0
-                      ? Math.round((stats.completedTasks / stats.totalTasks) * 100)
+                      ? Math.round(
+                          (stats.completedTasks / stats.totalTasks) * 100
+                        )
                       : 0}
                     %
                   </span>
@@ -371,7 +444,9 @@ export default function Reports() {
                   <Badge>{stats.totalIncidents}</Badge>
                 </div>
                 <div className="flex items-center justify-between">
-                  <span className="text-sm font-medium">Under Investigation</span>
+                  <span className="text-sm font-medium">
+                    Under Investigation
+                  </span>
                   <Badge variant="destructive">{stats.openIncidents}</Badge>
                 </div>
                 <div className="flex items-center justify-between">
@@ -386,7 +461,9 @@ export default function Reports() {
             <Card>
               <CardHeader>
                 <CardTitle>Measures Status</CardTitle>
-                <CardDescription>Corrective & preventive measures</CardDescription>
+                <CardDescription>
+                  Corrective & preventive measures
+                </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="flex items-center justify-between">
@@ -403,7 +480,9 @@ export default function Reports() {
                   <span className="text-sm font-medium">Completion Rate</span>
                   <span className="text-sm font-bold">
                     {stats.totalMeasures > 0
-                      ? Math.round((stats.completedMeasures / stats.totalMeasures) * 100)
+                      ? Math.round(
+                          (stats.completedMeasures / stats.totalMeasures) * 100
+                        )
                       : 0}
                     %
                   </span>
@@ -446,14 +525,19 @@ export default function Reports() {
                   <TableBody>
                     {trainingMatrix.length === 0 ? (
                       <TableRow>
-                        <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
+                        <TableCell
+                          colSpan={6}
+                          className="text-center py-8 text-muted-foreground"
+                        >
                           No training data available
                         </TableCell>
                       </TableRow>
                     ) : (
                       trainingMatrix.map((item, idx) => (
                         <TableRow key={idx}>
-                          <TableCell className="font-medium">{item.employee_name}</TableCell>
+                          <TableCell className="font-medium">
+                            {item.employee_name}
+                          </TableCell>
                           <TableCell>{item.total_required}</TableCell>
                           <TableCell>
                             <Badge variant="outline" className="bg-green-50">
@@ -462,7 +546,9 @@ export default function Reports() {
                           </TableCell>
                           <TableCell>
                             {item.expired > 0 ? (
-                              <Badge variant="destructive">{item.expired}</Badge>
+                              <Badge variant="destructive">
+                                {item.expired}
+                              </Badge>
                             ) : (
                               <span className="text-muted-foreground">0</span>
                             )}
@@ -470,7 +556,9 @@ export default function Reports() {
                           <TableCell>{item.compliance_rate}%</TableCell>
                           <TableCell>
                             {item.compliance_rate >= 80 ? (
-                              <Badge className="bg-green-100 text-green-800">Compliant</Badge>
+                              <Badge className="bg-green-100 text-green-800">
+                                Compliant
+                              </Badge>
                             ) : item.compliance_rate >= 50 ? (
                               <Badge className="bg-yellow-100 text-yellow-800">
                                 Needs Attention
@@ -494,7 +582,9 @@ export default function Reports() {
           <Card>
             <CardHeader>
               <CardTitle>Incident Analytics</CardTitle>
-              <CardDescription>Detailed incident reporting and trends</CardDescription>
+              <CardDescription>
+                Detailed incident reporting and trends
+              </CardDescription>
             </CardHeader>
             <CardContent>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -502,8 +592,12 @@ export default function Reports() {
                   <CardContent className="pt-6">
                     <div className="text-center">
                       <AlertTriangle className="h-12 w-12 mx-auto mb-2 text-red-600" />
-                      <div className="text-3xl font-bold">{stats.totalIncidents}</div>
-                      <p className="text-sm text-muted-foreground">Total Incidents</p>
+                      <div className="text-3xl font-bold">
+                        {stats.totalIncidents}
+                      </div>
+                      <p className="text-sm text-muted-foreground">
+                        Total Incidents
+                      </p>
                     </div>
                   </CardContent>
                 </Card>
@@ -511,8 +605,12 @@ export default function Reports() {
                   <CardContent className="pt-6">
                     <div className="text-center">
                       <BarChart3 className="h-12 w-12 mx-auto mb-2 text-orange-600" />
-                      <div className="text-3xl font-bold">{stats.openIncidents}</div>
-                      <p className="text-sm text-muted-foreground">Under Investigation</p>
+                      <div className="text-3xl font-bold">
+                        {stats.openIncidents}
+                      </div>
+                      <p className="text-sm text-muted-foreground">
+                        Under Investigation
+                      </p>
                     </div>
                   </CardContent>
                 </Card>
@@ -523,7 +621,9 @@ export default function Reports() {
                       <div className="text-3xl font-bold">
                         {stats.totalIncidents - stats.openIncidents}
                       </div>
-                      <p className="text-sm text-muted-foreground">Closed Cases</p>
+                      <p className="text-sm text-muted-foreground">
+                        Closed Cases
+                      </p>
                     </div>
                   </CardContent>
                 </Card>
@@ -547,8 +647,12 @@ export default function Reports() {
                   <CardContent className="pt-6">
                     <div className="text-center">
                       <FileText className="h-12 w-12 mx-auto mb-2 text-blue-600" />
-                      <div className="text-3xl font-bold">{stats.totalMeasures}</div>
-                      <p className="text-sm text-muted-foreground">Total Measures</p>
+                      <div className="text-3xl font-bold">
+                        {stats.totalMeasures}
+                      </div>
+                      <p className="text-sm text-muted-foreground">
+                        Total Measures
+                      </p>
                     </div>
                   </CardContent>
                 </Card>
@@ -559,7 +663,9 @@ export default function Reports() {
                       <div className="text-3xl font-bold">
                         {stats.totalMeasures - stats.completedMeasures}
                       </div>
-                      <p className="text-sm text-muted-foreground">In Progress</p>
+                      <p className="text-sm text-muted-foreground">
+                        In Progress
+                      </p>
                     </div>
                   </CardContent>
                 </Card>
@@ -567,7 +673,9 @@ export default function Reports() {
                   <CardContent className="pt-6">
                     <div className="text-center">
                       <CheckCircle className="h-12 w-12 mx-auto mb-2 text-green-600" />
-                      <div className="text-3xl font-bold">{stats.completedMeasures}</div>
+                      <div className="text-3xl font-bold">
+                        {stats.completedMeasures}
+                      </div>
                       <p className="text-sm text-muted-foreground">Completed</p>
                     </div>
                   </CardContent>

@@ -1,7 +1,14 @@
 import { useEffect, useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft, Plus, Search, Link as LinkIcon, Trash2, Edit } from "lucide-react";
+import {
+  ArrowLeft,
+  Plus,
+  Search,
+  Link as LinkIcon,
+  Trash2,
+  Edit,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -55,13 +62,15 @@ export default function ActivityGroups() {
   const { user, companyId, loading } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
-  
+
   const [activityGroups, setActivityGroups] = useState<ActivityGroup[]>([]);
   const [exposureGroups, setExposureGroups] = useState<ExposureGroup[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isExposureDialogOpen, setIsExposureDialogOpen] = useState(false);
-  const [editingItem, setEditingItem] = useState<ActivityGroup | ExposureGroup | null>(null);
+  const [editingItem, setEditingItem] = useState<
+    ActivityGroup | ExposureGroup | null
+  >(null);
 
   // Form states for Activity Groups
   const [formData, setFormData] = useState({
@@ -151,8 +160,8 @@ export default function ActivityGroups() {
 
       if (editingItem && "hazards" in editingItem) {
         // Update existing
-        const { error } = await supabase
-          .from("activity_groups" as any)
+        const { error } = await (supabase as any)
+          .from("activity_groups")
           .update({
             name: formData.name,
             description: formData.description || null,
@@ -162,7 +171,10 @@ export default function ActivityGroups() {
           .eq("id", editingItem.id);
 
         if (error) throw error;
-        toast({ title: "Success", description: "Activity group updated successfully" });
+        toast({
+          title: "Success",
+          description: "Activity group updated successfully",
+        });
       } else {
         // Create new
         const { error } = await supabase.from("activity_groups" as any).insert({
@@ -171,10 +183,13 @@ export default function ActivityGroups() {
           description: formData.description || null,
           hazards: hazardsArray.length > 0 ? hazardsArray : null,
           required_ppe: ppeArray.length > 0 ? ppeArray : null,
-        });
+        } as any);
 
         if (error) throw error;
-        toast({ title: "Success", description: "Activity group created successfully" });
+        toast({
+          title: "Success",
+          description: "Activity group created successfully",
+        });
       }
 
       setIsDialogOpen(false);
@@ -201,7 +216,7 @@ export default function ActivityGroups() {
 
       if (editingItem && "exposure_factors" in editingItem) {
         // Update existing
-        const { error } = await supabase
+        const { error } = await (supabase as any)
           .from("exposure_groups")
           .update({
             name: exposureFormData.name,
@@ -211,18 +226,24 @@ export default function ActivityGroups() {
           .eq("id", editingItem.id);
 
         if (error) throw error;
-        toast({ title: "Success", description: "Exposure group updated successfully" });
+        toast({
+          title: "Success",
+          description: "Exposure group updated successfully",
+        });
       } else {
         // Create new
-        const { error } = await supabase.from("exposure_groups").insert({
+        const { error } = await supabase.from("exposure_groups" as any).insert({
           company_id: companyId,
           name: exposureFormData.name,
           description: exposureFormData.description || null,
           exposure_factors: factorsArray.length > 0 ? factorsArray : null,
-        });
+        } as any);
 
         if (error) throw error;
-        toast({ title: "Success", description: "Exposure group created successfully" });
+        toast({
+          title: "Success",
+          description: "Exposure group created successfully",
+        });
       }
 
       setIsExposureDialogOpen(false);
@@ -238,12 +259,19 @@ export default function ActivityGroups() {
   };
 
   const handleDeleteActivity = async (id: string) => {
-    if (!confirm("Are you sure you want to delete this activity group?")) return;
+    if (!confirm("Are you sure you want to delete this activity group?"))
+      return;
 
     try {
-      const { error } = await supabase.from("activity_groups" as any).delete().eq("id", id);
+      const { error } = await supabase
+        .from("activity_groups" as any)
+        .delete()
+        .eq("id", id);
       if (error) throw error;
-      toast({ title: "Success", description: "Activity group deleted successfully" });
+      toast({
+        title: "Success",
+        description: "Activity group deleted successfully",
+      });
       fetchActivityGroups();
     } catch (error: any) {
       toast({
@@ -255,12 +283,19 @@ export default function ActivityGroups() {
   };
 
   const handleDeleteExposure = async (id: string) => {
-    if (!confirm("Are you sure you want to delete this exposure group?")) return;
+    if (!confirm("Are you sure you want to delete this exposure group?"))
+      return;
 
     try {
-      const { error } = await supabase.from("exposure_groups").delete().eq("id", id);
+      const { error } = await supabase
+        .from("exposure_groups")
+        .delete()
+        .eq("id", id);
       if (error) throw error;
-      toast({ title: "Success", description: "Exposure group deleted successfully" });
+      toast({
+        title: "Success",
+        description: "Exposure group deleted successfully",
+      });
       fetchExposureGroups();
     } catch (error: any) {
       toast({
@@ -322,14 +357,21 @@ export default function ActivityGroups() {
     <div className="p-4 sm:p-6 md:p-8">
       <div className="mb-6 sm:mb-8 flex flex-col sm:flex-row items-start justify-between gap-4">
         <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 w-full sm:w-auto">
-          <Button variant="ghost" onClick={() => navigate("/dashboard")} className="h-9 sm:h-10">
+          <Button
+            variant="ghost"
+            onClick={() => navigate("/dashboard")}
+            className="h-9 sm:h-10"
+          >
             <ArrowLeft className="w-4 h-4 mr-2" />
             Back
           </Button>
           <div>
-            <h2 className="text-2xl sm:text-3xl font-bold">Activity & Exposure Groups</h2>
+            <h2 className="text-2xl sm:text-3xl font-bold">
+              Activity & Exposure Groups
+            </h2>
             <p className="text-sm sm:text-base text-muted-foreground">
-              Manage work activities and exposure factors for automated risk assignment
+              Manage work activities and exposure factors for automated risk
+              assignment
             </p>
           </div>
         </div>
@@ -337,8 +379,12 @@ export default function ActivityGroups() {
 
       <Tabs defaultValue="activities" className="space-y-4 sm:space-y-6">
         <TabsList className="w-full sm:w-auto grid grid-cols-2 sm:inline-grid">
-          <TabsTrigger value="activities" className="text-xs sm:text-sm">Activity Groups (Tätigkeiten)</TabsTrigger>
-          <TabsTrigger value="exposures" className="text-xs sm:text-sm">Exposure Groups</TabsTrigger>
+          <TabsTrigger value="activities" className="text-xs sm:text-sm">
+            Activity Groups (Tätigkeiten)
+          </TabsTrigger>
+          <TabsTrigger value="exposures" className="text-xs sm:text-sm">
+            Exposure Groups
+          </TabsTrigger>
         </TabsList>
 
         {/* Activity Groups Tab */}
@@ -349,13 +395,17 @@ export default function ActivityGroups() {
                 <div>
                   <CardTitle>Activity Groups</CardTitle>
                   <CardDescription>
-                    Define work activities that employees perform. Link activities to risks and
-                    training requirements for automation.
+                    Define work activities that employees perform. Link
+                    activities to risks and training requirements for
+                    automation.
                   </CardDescription>
                 </div>
                 <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
                   <DialogTrigger asChild>
-                    <Button onClick={resetForm} className="w-full sm:w-auto text-sm">
+                    <Button
+                      onClick={resetForm}
+                      className="w-full sm:w-auto text-sm"
+                    >
                       <Plus className="w-4 h-4 mr-2" />
                       Add Activity Group
                     </Button>
@@ -363,10 +413,13 @@ export default function ActivityGroups() {
                   <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
                     <DialogHeader>
                       <DialogTitle>
-                        {editingItem ? "Edit Activity Group" : "Create Activity Group"}
+                        {editingItem
+                          ? "Edit Activity Group"
+                          : "Create Activity Group"}
                       </DialogTitle>
                       <DialogDescription>
-                        Define a work activity with associated hazards and required PPE
+                        Define a work activity with associated hazards and
+                        required PPE
                       </DialogDescription>
                     </DialogHeader>
                     <form onSubmit={handleSubmitActivity} className="space-y-4">
@@ -375,7 +428,9 @@ export default function ActivityGroups() {
                         <Input
                           id="name"
                           value={formData.name}
-                          onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                          onChange={(e) =>
+                            setFormData({ ...formData, name: e.target.value })
+                          }
                           placeholder="e.g., Welding Operations, Chemical Handling"
                           required
                         />
@@ -386,7 +441,10 @@ export default function ActivityGroups() {
                           id="description"
                           value={formData.description}
                           onChange={(e) =>
-                            setFormData({ ...formData, description: e.target.value })
+                            setFormData({
+                              ...formData,
+                              description: e.target.value,
+                            })
                           }
                           placeholder="Detailed description of the activity"
                           rows={3}
@@ -397,7 +455,12 @@ export default function ActivityGroups() {
                         <Textarea
                           id="hazards"
                           value={formData.hazards}
-                          onChange={(e) => setFormData({ ...formData, hazards: e.target.value })}
+                          onChange={(e) =>
+                            setFormData({
+                              ...formData,
+                              hazards: e.target.value,
+                            })
+                          }
                           placeholder="Enter hazards separated by commas (e.g., Burns, UV exposure, Fumes)"
                           rows={2}
                         />
@@ -411,7 +474,10 @@ export default function ActivityGroups() {
                           id="ppe"
                           value={formData.required_ppe}
                           onChange={(e) =>
-                            setFormData({ ...formData, required_ppe: e.target.value })
+                            setFormData({
+                              ...formData,
+                              required_ppe: e.target.value,
+                            })
                           }
                           placeholder="Enter required PPE separated by commas (e.g., Welding helmet, Gloves, Safety goggles)"
                           rows={2}
@@ -467,51 +533,76 @@ export default function ActivityGroups() {
                   <TableBody>
                     {filteredActivityGroups.length === 0 ? (
                       <TableRow>
-                        <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
+                        <TableCell
+                          colSpan={5}
+                          className="text-center py-8 text-muted-foreground"
+                        >
                           No activity groups found. Create one to get started.
                         </TableCell>
                       </TableRow>
                     ) : (
                       filteredActivityGroups.map((activity) => (
                         <TableRow key={activity.id}>
-                          <TableCell className="font-medium">{activity.name}</TableCell>
+                          <TableCell className="font-medium">
+                            {activity.name}
+                          </TableCell>
                           <TableCell className="max-w-xs truncate">
                             {activity.description || "-"}
                           </TableCell>
                           <TableCell>
                             <div className="flex flex-wrap gap-1">
-                              {activity.hazards && activity.hazards.length > 0 ? (
-                                activity.hazards.slice(0, 2).map((hazard, idx) => (
-                                  <Badge key={idx} variant="destructive" className="text-xs">
-                                    {hazard}
-                                  </Badge>
-                                ))
+                              {activity.hazards &&
+                              activity.hazards.length > 0 ? (
+                                activity.hazards
+                                  .slice(0, 2)
+                                  .map((hazard, idx) => (
+                                    <Badge
+                                      key={idx}
+                                      variant="destructive"
+                                      className="text-xs"
+                                    >
+                                      {hazard}
+                                    </Badge>
+                                  ))
                               ) : (
-                                <span className="text-muted-foreground text-sm">None</span>
+                                <span className="text-muted-foreground text-sm">
+                                  None
+                                </span>
                               )}
-                              {activity.hazards && activity.hazards.length > 2 && (
-                                <Badge variant="outline" className="text-xs">
-                                  +{activity.hazards.length - 2} more
-                                </Badge>
-                              )}
+                              {activity.hazards &&
+                                activity.hazards.length > 2 && (
+                                  <Badge variant="outline" className="text-xs">
+                                    +{activity.hazards.length - 2} more
+                                  </Badge>
+                                )}
                             </div>
                           </TableCell>
                           <TableCell>
                             <div className="flex flex-wrap gap-1">
-                              {activity.required_ppe && activity.required_ppe.length > 0 ? (
-                                activity.required_ppe.slice(0, 2).map((ppe, idx) => (
-                                  <Badge key={idx} variant="secondary" className="text-xs">
-                                    {ppe}
-                                  </Badge>
-                                ))
+                              {activity.required_ppe &&
+                              activity.required_ppe.length > 0 ? (
+                                activity.required_ppe
+                                  .slice(0, 2)
+                                  .map((ppe, idx) => (
+                                    <Badge
+                                      key={idx}
+                                      variant="secondary"
+                                      className="text-xs"
+                                    >
+                                      {ppe}
+                                    </Badge>
+                                  ))
                               ) : (
-                                <span className="text-muted-foreground text-sm">None</span>
+                                <span className="text-muted-foreground text-sm">
+                                  None
+                                </span>
                               )}
-                              {activity.required_ppe && activity.required_ppe.length > 2 && (
-                                <Badge variant="outline" className="text-xs">
-                                  +{activity.required_ppe.length - 2} more
-                                </Badge>
-                              )}
+                              {activity.required_ppe &&
+                                activity.required_ppe.length > 2 && (
+                                  <Badge variant="outline" className="text-xs">
+                                    +{activity.required_ppe.length - 2} more
+                                  </Badge>
+                                )}
                             </div>
                           </TableCell>
                           <TableCell className="text-right">
@@ -526,7 +617,9 @@ export default function ActivityGroups() {
                               <Button
                                 variant="ghost"
                                 size="sm"
-                                onClick={() => handleDeleteActivity(activity.id)}
+                                onClick={() =>
+                                  handleDeleteActivity(activity.id)
+                                }
                               >
                                 <Trash2 className="w-4 h-4 text-destructive" />
                               </Button>
@@ -550,11 +643,14 @@ export default function ActivityGroups() {
                 <div>
                   <CardTitle>Exposure Groups</CardTitle>
                   <CardDescription>
-                    Define exposure factors (noise, chemicals, biological agents) that employees
-                    may encounter
+                    Define exposure factors (noise, chemicals, biological
+                    agents) that employees may encounter
                   </CardDescription>
                 </div>
-                <Dialog open={isExposureDialogOpen} onOpenChange={setIsExposureDialogOpen}>
+                <Dialog
+                  open={isExposureDialogOpen}
+                  onOpenChange={setIsExposureDialogOpen}
+                >
                   <DialogTrigger asChild>
                     <Button onClick={resetExposureForm}>
                       <Plus className="w-4 h-4 mr-2" />
@@ -564,10 +660,13 @@ export default function ActivityGroups() {
                   <DialogContent className="max-w-2xl">
                     <DialogHeader>
                       <DialogTitle>
-                        {editingItem ? "Edit Exposure Group" : "Create Exposure Group"}
+                        {editingItem
+                          ? "Edit Exposure Group"
+                          : "Create Exposure Group"}
                       </DialogTitle>
                       <DialogDescription>
-                        Define exposure factors for health monitoring and risk assessment
+                        Define exposure factors for health monitoring and risk
+                        assessment
                       </DialogDescription>
                     </DialogHeader>
                     <form onSubmit={handleSubmitExposure} className="space-y-4">
@@ -577,7 +676,10 @@ export default function ActivityGroups() {
                           id="exp-name"
                           value={exposureFormData.name}
                           onChange={(e) =>
-                            setExposureFormData({ ...exposureFormData, name: e.target.value })
+                            setExposureFormData({
+                              ...exposureFormData,
+                              name: e.target.value,
+                            })
                           }
                           placeholder="e.g., High Noise Exposure, Chemical Handlers"
                           required
@@ -662,33 +764,48 @@ export default function ActivityGroups() {
                   <TableBody>
                     {filteredExposureGroups.length === 0 ? (
                       <TableRow>
-                        <TableCell colSpan={4} className="text-center py-8 text-muted-foreground">
+                        <TableCell
+                          colSpan={4}
+                          className="text-center py-8 text-muted-foreground"
+                        >
                           No exposure groups found. Create one to get started.
                         </TableCell>
                       </TableRow>
                     ) : (
                       filteredExposureGroups.map((exposure) => (
                         <TableRow key={exposure.id}>
-                          <TableCell className="font-medium">{exposure.name}</TableCell>
+                          <TableCell className="font-medium">
+                            {exposure.name}
+                          </TableCell>
                           <TableCell className="max-w-xs truncate">
                             {exposure.description || "-"}
                           </TableCell>
                           <TableCell>
                             <div className="flex flex-wrap gap-1">
-                              {exposure.exposure_factors && exposure.exposure_factors.length > 0 ? (
-                                exposure.exposure_factors.slice(0, 3).map((factor, idx) => (
-                                  <Badge key={idx} variant="outline" className="text-xs">
-                                    {factor}
-                                  </Badge>
-                                ))
+                              {exposure.exposure_factors &&
+                              exposure.exposure_factors.length > 0 ? (
+                                exposure.exposure_factors
+                                  .slice(0, 3)
+                                  .map((factor, idx) => (
+                                    <Badge
+                                      key={idx}
+                                      variant="outline"
+                                      className="text-xs"
+                                    >
+                                      {factor}
+                                    </Badge>
+                                  ))
                               ) : (
-                                <span className="text-muted-foreground text-sm">None</span>
+                                <span className="text-muted-foreground text-sm">
+                                  None
+                                </span>
                               )}
-                              {exposure.exposure_factors && exposure.exposure_factors.length > 3 && (
-                                <Badge variant="outline" className="text-xs">
-                                  +{exposure.exposure_factors.length - 3} more
-                                </Badge>
-                              )}
+                              {exposure.exposure_factors &&
+                                exposure.exposure_factors.length > 3 && (
+                                  <Badge variant="outline" className="text-xs">
+                                    +{exposure.exposure_factors.length - 3} more
+                                  </Badge>
+                                )}
                             </div>
                           </TableCell>
                           <TableCell className="text-right">
@@ -703,7 +820,9 @@ export default function ActivityGroups() {
                               <Button
                                 variant="ghost"
                                 size="sm"
-                                onClick={() => handleDeleteExposure(exposure.id)}
+                                onClick={() =>
+                                  handleDeleteExposure(exposure.id)
+                                }
                               >
                                 <Trash2 className="w-4 h-4 text-destructive" />
                               </Button>

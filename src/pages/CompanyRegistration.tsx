@@ -3,7 +3,13 @@ import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -13,65 +19,81 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 
-const registrationSchema = z.object({
-  companyName: z.string().min(2, "Company name must be at least 2 characters"),
-  companyEmail: z.string().email("Invalid email address"),
-  companyPhone: z.string().optional(),
-  companyAddress: z.string().optional(),
-  adminName: z.string().min(2, "Name must be at least 2 characters"),
-  adminEmail: z.string().email("Invalid email address"),
-  password: z.string().min(8, "Password must be at least 8 characters"),
-  confirmPassword: z.string(),
-}).refine((data) => data.password === data.confirmPassword, {
-  message: "Passwords don't match",
-  path: ["confirmPassword"],
-});
+const registrationSchema = z
+  .object({
+    companyName: z
+      .string()
+      .min(2, "Company name must be at least 2 characters"),
+    companyEmail: z.string().email("Invalid email address"),
+    companyPhone: z.string().optional(),
+    companyAddress: z.string().optional(),
+    adminName: z.string().min(2, "Name must be at least 2 characters"),
+    adminEmail: z.string().email("Invalid email address"),
+    password: z.string().min(8, "Password must be at least 8 characters"),
+    confirmPassword: z.string(),
+  })
+  .refine((data) => data.password === data.confirmPassword, {
+    message: "Passwords don't match",
+    path: ["confirmPassword"],
+  });
 
 type RegistrationForm = z.infer<typeof registrationSchema>;
 
 const subscriptionPlans = [
   {
     tier: "basic",
-    name: "Basic",
-    price: 29.99,
-    maxEmployees: 10,
+    name: "Package S",
+    subtitle: "HSE Basic - The digital entry point",
+    price: 149,
+    maxEmployees: 5,
+    users: "5 users included (1 admin + 4 users)",
     features: [
-      "Up to 10 employees",
-      "Basic risk assessments",
-      "Incident reporting",
-      "Task management",
-      "Email support",
+      "Dashboard (examinations, due dates, documents)",
+      "Employee management (master data, files)",
+      "Examination management (G examinations, appointments, planning)",
+      "Document management (PDF, images) (5 GB Storage)",
+      "Standard reports (CSV/PDF export)",
+      "GDPR export & account deletion",
+      "Task list",
+      "Roles & permissions (doctor, admin, company, employee)",
     ],
   },
   {
-    tier: "standard",
-    name: "Standard",
-    price: 79.99,
-    maxEmployees: 50,
+    tier: "pro",
+    name: "Package M",
+    subtitle: "HSE Pro - Structured teamwork",
+    price: 249,
+    maxEmployees: 10,
+    users: "10 users",
     features: [
-      "Up to 50 employees",
-      "Advanced risk assessments",
-      "Automated workflows",
-      "Audit management",
-      "Training tracking",
-      "Priority support",
-      "Custom reports",
+      "Everything from Basic + Pro features",
+      "Incident and near-miss reports",
+      "Risk assessments (GBU module)",
+      "Action tracking",
+      "Advanced task management (assignments + status)",
+      "Automatic reminders & email notifications",
+      "Partner integrations via API token (e.g. laboratory / doctor / service provider)",
     ],
     popular: true,
   },
   {
-    tier: "premium",
-    name: "Premium",
-    price: 149.99,
+    tier: "enterprise",
+    name: "Package M",
+    subtitle: "HSE Enterprise - For large SMEs & groups",
+    price: 349,
     maxEmployees: 999,
+    users: "unlimited users",
     features: [
-      "Unlimited employees",
-      "All Standard features",
-      "Advanced analytics",
-      "API access",
-      "Custom integrations",
-      "Dedicated account manager",
-      "24/7 phone support",
+      "Everything from Basic + Pro + Enterprise",
+      "Training management",
+      "Courses (up to 20 courses)",
+      "Progress tracking",
+      "Certificates (PDF)",
+      "Audit management",
+      "Multi-client (multiple locations/companies)",
+      "Cross-location reports",
+      "Complete API suite",
+      "Priority Support",
     ],
   },
 ];
@@ -79,7 +101,9 @@ const subscriptionPlans = [
 export default function CompanyRegistration() {
   const navigate = useNavigate();
   const { toast } = useToast();
-  const [selectedTier, setSelectedTier] = useState<"basic" | "standard" | "premium">("standard");
+  const [selectedTier, setSelectedTier] = useState<
+    "basic" | "pro" | "enterprise"
+  >("pro");
   const [loading, setLoading] = useState(false);
 
   const {
@@ -111,37 +135,39 @@ export default function CompanyRegistration() {
       if (!authData.user) throw new Error("User creation failed");
 
       // Step 3: Wait a moment for the user to be fully created in auth.users
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      await new Promise((resolve) => setTimeout(resolve, 1000));
 
       // Step 4: Sign in to get a valid session
-      const { data: sessionData, error: signInError } = await supabase.auth.signInWithPassword({
-        email: data.adminEmail,
-        password: data.password,
-      });
+      const { data: sessionData, error: signInError } =
+        await supabase.auth.signInWithPassword({
+          email: data.adminEmail,
+          password: data.password,
+        });
 
       if (signInError) throw signInError;
       if (!sessionData.user) throw new Error("Failed to establish session");
 
       // Step 5: Call the registration function to complete setup
       // This function runs with SECURITY DEFINER to bypass RLS
-      const selectedPlan = subscriptionPlans.find((p) => p.tier === selectedTier)!;
-      
-      const { data: registrationResult, error: registrationError } = await supabase.rpc(
-        "register_company",
-        {
-          registration_data: {
-            user_id: sessionData.user.id, // Use the confirmed user ID from session
-            company_name: data.companyName,
-            company_email: data.companyEmail,
-            company_phone: data.companyPhone || "",
-            company_address: data.companyAddress || "",
-            subscription_tier: selectedTier,
-            max_employees: selectedPlan.maxEmployees,
-            admin_email: data.adminEmail,
-            admin_name: data.adminName,
-          },
-        }
-      );
+      const selectedPlan = subscriptionPlans.find(
+        (p) => p.tier === selectedTier
+      )!;
+
+      const { data: registrationResult, error: registrationError } = await (
+        supabase as any
+      ).rpc("register_company", {
+        registration_data: {
+          user_id: sessionData.user.id, // Use the confirmed user ID from session
+          company_name: data.companyName,
+          company_email: data.companyEmail,
+          company_phone: data.companyPhone || "",
+          company_address: data.companyAddress || "",
+          subscription_tier: selectedTier,
+          max_employees: selectedPlan.maxEmployees,
+          admin_email: data.adminEmail,
+          admin_name: data.adminName,
+        },
+      } as any);
 
       if (registrationError) {
         console.error("Registration function error:", registrationError);
@@ -149,11 +175,16 @@ export default function CompanyRegistration() {
       }
 
       // Check if the function returned an error
-      if (registrationResult && !registrationResult.success) {
-        throw new Error(registrationResult.error || "Registration failed");
+      if (registrationResult && !(registrationResult as any).success) {
+        throw new Error(
+          (registrationResult as any).error || "Registration failed"
+        );
       }
 
-      console.log("✅ Registration function completed successfully:", registrationResult);
+      console.log(
+        "✅ Registration function completed successfully:",
+        registrationResult
+      );
 
       toast({
         title: "Success! 🎉",
@@ -162,12 +193,12 @@ export default function CompanyRegistration() {
       });
 
       // Wait longer for database to fully commit
-      await new Promise(resolve => setTimeout(resolve, 2000));
+      await new Promise((resolve) => setTimeout(resolve, 2000));
 
       // Force sign out and redirect to auth page so user can sign back in
       console.log("Registration complete, signing out to refresh session...");
       await supabase.auth.signOut();
-      
+
       toast({
         title: "Almost Done!",
         description:
@@ -193,19 +224,28 @@ export default function CompanyRegistration() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 dark:from-gray-900 dark:via-background dark:to-gray-900">
       <div className="container mx-auto px-4 py-12">
+        <div className="mb-6">
+          <Button
+            variant="ghost"
+            onClick={() => navigate("/")}
+            className="-ml-4 hover:bg-transparent hover:text-primary"
+          >
+            ← Back to Homepage
+          </Button>
+        </div>
         {/* Header */}
         <div className="text-center mb-12">
           <div className="flex items-center justify-center gap-3 mb-4">
             <div className="w-12 h-12 rounded-xl bg-primary flex items-center justify-center">
               <Building2 className="w-7 h-7 text-primary-foreground" />
             </div>
-            <h1 className="text-4xl font-bold">HSE Hub</h1>
+            <h1 className="text-4xl font-bold">SafetyHub</h1>
           </div>
           <p className="text-xl text-muted-foreground">
-            Start managing your workplace safety today
+            Choose Your Plan & Register Your Company
           </p>
           <p className="text-sm text-muted-foreground mt-2">
-            30-day free trial • No credit card required
+            7-day free trial • No credit card required
           </p>
         </div>
 
@@ -232,10 +272,16 @@ export default function CompanyRegistration() {
                       <Badge className="bg-primary">Most Popular</Badge>
                     )}
                   </div>
+                  <CardDescription className="text-xs mb-2">
+                    {plan.subtitle}
+                  </CardDescription>
                   <div className="mt-4">
-                    <span className="text-4xl font-bold">${plan.price}</span>
+                    <span className="text-4xl font-bold">{plan.price}€</span>
                     <span className="text-muted-foreground">/month</span>
                   </div>
+                  <p className="text-sm text-blue-600 font-semibold mt-2">
+                    {plan.users}
+                  </p>
                 </CardHeader>
                 <CardContent>
                   <ul className="space-y-3">
@@ -317,9 +363,7 @@ export default function CompanyRegistration() {
 
               {/* Admin Details */}
               <div className="space-y-4">
-                <h3 className="text-lg font-semibold">
-                  Administrator Account
-                </h3>
+                <h3 className="text-lg font-semibold">Administrator Account</h3>
                 <div>
                   <Label htmlFor="adminName">Full Name *</Label>
                   <Input
@@ -383,15 +427,21 @@ export default function CompanyRegistration() {
 
               {/* Submit */}
               <div className="flex flex-col gap-4">
-                <Button type="submit" size="lg" disabled={loading} className="w-full">
+                <Button
+                  type="submit"
+                  size="lg"
+                  disabled={loading}
+                  className="w-full"
+                >
                   {loading ? (
                     <>
                       <Loader2 className="w-4 h-4 mr-2 animate-spin" />
                       Creating Account...
                     </>
                   ) : (
-                    `Start 30-Day Free Trial (${
-                      subscriptionPlans.find((p) => p.tier === selectedTier)?.name
+                    `Start 7-Day Free Trial (${
+                      subscriptionPlans.find((p) => p.tier === selectedTier)
+                        ?.name
                     })`
                   )}
                 </Button>

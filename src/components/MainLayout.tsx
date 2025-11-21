@@ -28,6 +28,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/AuthContext";
+import { useLanguage } from "@/contexts/LanguageContext";
 import NotificationBell from "@/components/NotificationBell";
 
 type Props = {
@@ -36,6 +37,7 @@ type Props = {
 
 export default function MainLayout({ children }: Props) {
   const { userRole, signOut, companyName } = useAuth();
+  const { language, setLanguage, t } = useLanguage();
   const location = useLocation();
   const [darkMode, setDarkMode] = useState(false);
 
@@ -72,107 +74,130 @@ export default function MainLayout({ children }: Props) {
     return userRole === "super_admin" || userRole === "company_admin";
   };
 
+  const isSettingsPage = location.pathname === "/settings";
+
   return (
     <div className="flex min-h-screen bg-gray-50 dark:bg-gray-950">
-      <aside className="w-64 bg-white dark:bg-gray-900 border-r border-gray-200 dark:border-gray-800 flex flex-col h-screen sticky top-0">
-        <div className="p-6 border-b border-gray-200 dark:border-gray-800">
-          <Link to="/dashboard" className="flex items-center gap-2">
-            <Shield className="w-8 h-8 text-blue-600 dark:text-blue-400" />
-            <span className="text-xl font-bold text-gray-900 dark:text-white">HSE Hub</span>
-          </Link>
-        </div>
-
-        <nav className="flex-1 p-4 space-y-1 overflow-y-auto">
-          <Link to="/dashboard" className={getLinkClasses("/dashboard")}>
-            <BarChart className="w-5 h-5" />
-            <span>Dashboard</span>
-          </Link>
-
-          <Link to="/employees" className={getLinkClasses("/employees")}>
-            <Users className="w-5 h-5" />
-            <span>Employees</span>
-          </Link>
-
-          <Link to="/messages" className={getLinkClasses("/messages")}>
-            <MessageSquare className="w-5 h-5" />
-            <span>Messages</span>
-          </Link>
-
-          <Link to="/investigations" className={getLinkClasses("/investigations")}>
-            <Shield className="w-5 h-5" />
-            <span>Investigations</span>
-          </Link>
-
-          <Link to="/risk-assessments" className={getLinkClasses("/risk-assessments")}>
-            <AlertTriangle className="w-5 h-5" />
-            <span>Risk Assessments</span>
-          </Link>
-
-          {shouldShowMeasuresSubmenu() && (
-            <Link to="/measures" className="flex items-center gap-3 px-4 py-3 pl-8 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">
-              <CheckCircle className="w-4 h-4" />
-              <span className="text-sm">Measures</span>
-            </Link>
-          )}
-
-          <Link to="/training" className={getLinkClasses("/training")}>
-            <CheckCircle className="w-5 h-5" />
-            <span>Trainings</span>
-          </Link>
-
-          <Link to="/incidents" className={getLinkClasses("/incidents")}>
-            <AlertTriangle className="w-5 h-5" />
-            <span>Incidents</span>
-          </Link>
-
-          <Link to="/audits" className={getLinkClasses("/audits")}>
-            <FileCheck className="w-5 h-5" />
-            <span>Audits</span>
-          </Link>
-
-          <Link to="/reports" className={getLinkClasses("/reports")}>
-            <BarChart className="w-5 h-5" />
-            <span>Reports</span>
-          </Link>
-
-          <div className="pt-4 mt-4 border-t border-gray-200 dark:border-gray-800">
-            <Link to="/settings" className={getLinkClasses("/settings")}>
-              <Settings className="w-5 h-5" />
-              <span>Settings</span>
+      {!isSettingsPage && (
+        <aside className="w-64 bg-white dark:bg-gray-900 border-r border-gray-200 dark:border-gray-800 flex flex-col h-screen sticky top-0">
+          <div className="p-6 border-b border-gray-200 dark:border-gray-800">
+            <Link to="/dashboard" className="flex items-center gap-3">
+              <div className="relative">
+                <div className="absolute inset-0 bg-gradient-to-r from-blue-600 to-green-600 rounded-xl blur opacity-25"></div>
+                <img
+                  src="/logo.png"
+                  alt="SafetyHub Logo"
+                  className="h-10 w-10 relative z-10"
+                />
+              </div>
+              <span className="text-xl font-bold bg-gradient-to-r from-blue-600 to-green-600 bg-clip-text text-transparent">
+                Safety hub
+              </span>
             </Link>
           </div>
-        </nav>
 
-        <div className="p-4 border-t border-gray-200 dark:border-gray-800 space-y-3">
-          <div className="flex items-center gap-3 px-4 py-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
-            <Building2 className="w-5 h-5 text-gray-600 dark:text-gray-400" />
-            <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium text-gray-900 dark:text-white truncate">
-                {companyName || "Company"}
-              </p>
-              <p className="text-xs text-gray-500 dark:text-gray-400 capitalize">
-                {userRole?.replace("_", " ") || "User"}
-              </p>
+          <nav className="flex-1 p-4 space-y-1 overflow-y-auto">
+            <Link to="/dashboard" className={getLinkClasses("/dashboard")}>
+              <BarChart className="w-5 h-5" />
+              <span>{t("nav.dashboard")}</span>
+            </Link>
+
+            <Link to="/employees" className={getLinkClasses("/employees")}>
+              <Users className="w-5 h-5" />
+              <span>{t("nav.employees")}</span>
+            </Link>
+
+            <Link to="/messages" className={getLinkClasses("/messages")}>
+              <MessageSquare className="w-5 h-5" />
+              <span>{t("nav.messages")}</span>
+            </Link>
+
+            <Link
+              to="/investigations"
+              className={getLinkClasses("/investigations")}
+            >
+              <Shield className="w-5 h-5" />
+              <span>{t("nav.investigations")}</span>
+            </Link>
+
+            <Link
+              to="/risk-assessments"
+              className={getLinkClasses("/risk-assessments")}
+            >
+              <AlertTriangle className="w-5 h-5" />
+              <span>{t("nav.riskAssessments")}</span>
+            </Link>
+
+            {shouldShowMeasuresSubmenu() && (
+              <Link
+                to="/measures"
+                className="flex items-center gap-3 px-4 py-3 pl-8 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+              >
+                <CheckCircle className="w-4 h-4" />
+                <span className="text-sm">{t("nav.measures")}</span>
+              </Link>
+            )}
+
+            <Link to="/training" className={getLinkClasses("/training")}>
+              <CheckCircle className="w-5 h-5" />
+              <span>{t("nav.trainings")}</span>
+            </Link>
+
+            <Link to="/incidents" className={getLinkClasses("/incidents")}>
+              <AlertTriangle className="w-5 h-5" />
+              <span>{t("nav.incidents")}</span>
+            </Link>
+
+            <Link to="/audits" className={getLinkClasses("/audits")}>
+              <FileCheck className="w-5 h-5" />
+              <span>{t("nav.audits")}</span>
+            </Link>
+
+            <Link to="/reports" className={getLinkClasses("/reports")}>
+              <BarChart className="w-5 h-5" />
+              <span>{t("nav.reports")}</span>
+            </Link>
+
+            <div className="pt-4 mt-4 border-t border-gray-200 dark:border-gray-800">
+              <Link to="/settings" className={getLinkClasses("/settings")}>
+                <Settings className="w-5 h-5" />
+                <span>{t("nav.settings")}</span>
+              </Link>
             </div>
-          </div>
+          </nav>
 
-          <Button
-            variant="ghost"
-            onClick={signOut}
-            className="w-full justify-start text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950 hover:text-red-700 dark:hover:text-red-300"
-          >
-            <LogOut className="w-5 h-5 mr-3" />
-            <span>Logout</span>
-          </Button>
-        </div>
-      </aside>
+          <div className="p-4 border-t border-gray-200 dark:border-gray-800 space-y-3">
+            <div className="flex items-center gap-3 px-4 py-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
+              <Building2 className="w-5 h-5 text-gray-600 dark:text-gray-400" />
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-medium text-gray-900 dark:text-white truncate">
+                  {companyName || "Company"}
+                </p>
+                <p className="text-xs text-gray-500 dark:text-gray-400 capitalize">
+                  {userRole?.replace("_", " ") || "User"}
+                </p>
+              </div>
+            </div>
+
+            <Button
+              variant="ghost"
+              onClick={signOut}
+              className="w-full justify-start text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950 hover:text-red-700 dark:hover:text-red-300"
+            >
+              <LogOut className="w-5 h-5 mr-3" />
+              <span>{t("nav.logout")}</span>
+            </Button>
+          </div>
+        </aside>
+      )}
 
       <div className="flex-1 flex flex-col">
         <header className="bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800 sticky top-0 z-10">
           <div className="px-6 py-4 flex items-center justify-between">
             <h2 className="text-2xl font-semibold text-gray-900 dark:text-white">
-              Welcome to HSE Hub
+             
             </h2>
+
             <div className="flex items-center gap-4">
               <NotificationBell />
 
@@ -198,22 +223,34 @@ export default function MainLayout({ children }: Props) {
                       Invoices
                     </DropdownMenuItem>
                   </Link>
-                  <DropdownMenuItem 
+                  <DropdownMenuItem
                     className="cursor-pointer"
                     onClick={toggleDarkMode}
                   >
-                    {darkMode ? <Sun className="w-4 h-4 mr-2" /> : <Moon className="w-4 h-4 mr-2" />}
+                    {darkMode ? (
+                      <Sun className="w-4 h-4 mr-2" />
+                    ) : (
+                      <Moon className="w-4 h-4 mr-2" />
+                    )}
                     Dark mode
                   </DropdownMenuItem>
-                  <DropdownMenuItem className="cursor-pointer justify-between">
+                  <DropdownMenuItem
+                    className="cursor-pointer justify-between"
+                    onClick={() => setLanguage(language === "en" ? "de" : "en")}
+                  >
                     <div className="flex items-center">
                       <Globe className="w-4 h-4 mr-2" />
                       Language
                     </div>
-                    <span className="text-xs text-muted-foreground">EN</span>
+                    <span className="text-xs text-muted-foreground">
+                      {language === "en" ? "EN" : "DE"}
+                    </span>
                   </DropdownMenuItem>
                   <DropdownMenuSeparator />
-                  <DropdownMenuItem onClick={signOut} className="cursor-pointer text-red-600 dark:text-red-400">
+                  <DropdownMenuItem
+                    onClick={signOut}
+                    className="cursor-pointer text-red-600 dark:text-red-400"
+                  >
                     <LogOut className="w-4 h-4 mr-2" />
                     Sign out
                   </DropdownMenuItem>

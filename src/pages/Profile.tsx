@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
+import { useLanguage } from "@/contexts/LanguageContext";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import {
@@ -11,15 +12,15 @@ import {
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { ArrowLeft, Camera, Save, Mail, Phone, MapPin, Building2 } from "lucide-react";
+import { ArrowLeft, Camera, Save, Mail, Languages } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 export default function Profile() {
   const { user, loading, userRole, companyId } = useAuth();
+  const { t, language, setLanguage } = useLanguage();
   const navigate = useNavigate();
   const { toast } = useToast();
   const [isEditing, setIsEditing] = useState(false);
@@ -27,10 +28,6 @@ export default function Profile() {
     firstName: "Company",
     lastName: "Admin",
     email: user?.email || "",
-    phone: "",
-    location: "",
-    department: "",
-    bio: "",
   });
 
   useEffect(() => {
@@ -41,8 +38,8 @@ export default function Profile() {
 
   const handleSave = () => {
     toast({
-      title: "Profile Updated",
-      description: "Your profile information has been saved successfully.",
+      title: t("profile.updated"),
+      description: t("profile.updatedDesc"),
     });
     setIsEditing(false);
   };
@@ -68,16 +65,16 @@ export default function Profile() {
               <ArrowLeft className="w-5 h-5" />
             </Button>
             <div>
-              <h1 className="text-xl font-bold">Profile Settings</h1>
+              <h1 className="text-xl font-bold">{t("profile.title")}</h1>
               <p className="text-xs text-muted-foreground">
-                Manage your account information
+                {t("profile.subtitle")}
               </p>
             </div>
           </div>
           {isEditing && (
             <Button onClick={handleSave}>
               <Save className="w-4 h-4 mr-2" />
-              Save Changes
+              {t("profile.saveChanges")}
             </Button>
           )}
         </div>
@@ -86,19 +83,19 @@ export default function Profile() {
       <main className="container mx-auto px-4 py-8 max-w-4xl">
         <Tabs defaultValue="general" className="space-y-6">
           <TabsList className="grid w-full grid-cols-3">
-            <TabsTrigger value="general">General</TabsTrigger>
-            <TabsTrigger value="security">Security</TabsTrigger>
-            <TabsTrigger value="preferences">Preferences</TabsTrigger>
+            <TabsTrigger value="general">{t("profile.general")}</TabsTrigger>
+            <TabsTrigger value="security">{t("profile.security")}</TabsTrigger>
+            <TabsTrigger value="preferences">
+              {t("profile.preferences")}
+            </TabsTrigger>
           </TabsList>
 
           {/* General Tab */}
           <TabsContent value="general" className="space-y-6">
             <Card>
               <CardHeader>
-                <CardTitle>Profile Picture</CardTitle>
-                <CardDescription>
-                  Update your profile picture and personal information
-                </CardDescription>
+                <CardTitle>{t("profile.picture")}</CardTitle>
+                <CardDescription>{t("profile.pictureDesc")}</CardDescription>
               </CardHeader>
               <CardContent className="space-y-6">
                 <div className="flex items-center gap-6">
@@ -111,10 +108,10 @@ export default function Profile() {
                   <div className="space-y-2">
                     <Button variant="outline" size="sm">
                       <Camera className="w-4 h-4 mr-2" />
-                      Change Picture
+                      {t("profile.changePicture")}
                     </Button>
                     <p className="text-xs text-muted-foreground">
-                      JPG, PNG or GIF. Max size 2MB
+                      {t("profile.pictureFormat")}
                     </p>
                   </div>
                 </div>
@@ -123,31 +120,37 @@ export default function Profile() {
 
             <Card>
               <CardHeader>
-                <CardTitle>Personal Information</CardTitle>
+                <CardTitle>{t("profile.personalInfo")}</CardTitle>
                 <CardDescription>
-                  Update your personal details
+                  {t("profile.personalInfoDesc")}
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <Label htmlFor="firstName">First Name</Label>
+                    <Label htmlFor="firstName">{t("profile.firstName")}</Label>
                     <Input
                       id="firstName"
                       value={profileData.firstName}
                       onChange={(e) =>
-                        setProfileData({ ...profileData, firstName: e.target.value })
+                        setProfileData({
+                          ...profileData,
+                          firstName: e.target.value,
+                        })
                       }
                       disabled={!isEditing}
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="lastName">Last Name</Label>
+                    <Label htmlFor="lastName">{t("profile.lastName")}</Label>
                     <Input
                       id="lastName"
                       value={profileData.lastName}
                       onChange={(e) =>
-                        setProfileData({ ...profileData, lastName: e.target.value })
+                        setProfileData({
+                          ...profileData,
+                          lastName: e.target.value,
+                        })
                       }
                       disabled={!isEditing}
                     />
@@ -155,7 +158,7 @@ export default function Profile() {
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="email">Email</Label>
+                  <Label htmlFor="email">{t("profile.email")}</Label>
                   <div className="relative">
                     <Mail className="absolute left-3 top-3 w-4 h-4 text-muted-foreground" />
                     <Input
@@ -167,84 +170,22 @@ export default function Profile() {
                     />
                   </div>
                   <p className="text-xs text-muted-foreground">
-                    Email cannot be changed
+                    {t("profile.emailNote")}
                   </p>
                 </div>
 
-                <div className="space-y-2">
-                  <Label htmlFor="phone">Phone Number</Label>
-                  <div className="relative">
-                    <Phone className="absolute left-3 top-3 w-4 h-4 text-muted-foreground" />
-                    <Input
-                      id="phone"
-                      type="tel"
-                      value={profileData.phone}
-                      onChange={(e) =>
-                        setProfileData({ ...profileData, phone: e.target.value })
-                      }
-                      className="pl-10"
-                      disabled={!isEditing}
-                      placeholder="+1 (555) 000-0000"
-                    />
-                  </div>
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="location">Location</Label>
-                  <div className="relative">
-                    <MapPin className="absolute left-3 top-3 w-4 h-4 text-muted-foreground" />
-                    <Input
-                      id="location"
-                      value={profileData.location}
-                      onChange={(e) =>
-                        setProfileData({ ...profileData, location: e.target.value })
-                      }
-                      className="pl-10"
-                      disabled={!isEditing}
-                      placeholder="City, Country"
-                    />
-                  </div>
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="department">Department</Label>
-                  <div className="relative">
-                    <Building2 className="absolute left-3 top-3 w-4 h-4 text-muted-foreground" />
-                    <Input
-                      id="department"
-                      value={profileData.department}
-                      onChange={(e) =>
-                        setProfileData({ ...profileData, department: e.target.value })
-                      }
-                      className="pl-10"
-                      disabled={!isEditing}
-                      placeholder="Your department"
-                    />
-                  </div>
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="bio">Bio</Label>
-                  <Textarea
-                    id="bio"
-                    value={profileData.bio}
-                    onChange={(e) =>
-                      setProfileData({ ...profileData, bio: e.target.value })
-                    }
-                    disabled={!isEditing}
-                    placeholder="Tell us about yourself..."
-                    rows={4}
-                  />
-                </div>
-
                 <div className="flex items-center gap-2">
-                  <Badge variant="secondary">Role: {userRole?.replace("_", " ")}</Badge>
-                  <Badge variant="outline">Company ID: {companyId?.slice(0, 8)}</Badge>
+                  <Badge variant="secondary">
+                    {t("profile.role")} {userRole?.replace("_", " ")}
+                  </Badge>
+                  <Badge variant="outline">
+                    {t("profile.companyId")} {companyId?.slice(0, 8)}
+                  </Badge>
                 </div>
 
                 {!isEditing && (
                   <Button onClick={() => setIsEditing(true)} className="w-full">
-                    Edit Profile
+                    {t("profile.editProfile")}
                   </Button>
                 )}
               </CardContent>
@@ -255,37 +196,39 @@ export default function Profile() {
           <TabsContent value="security" className="space-y-6">
             <Card>
               <CardHeader>
-                <CardTitle>Change Password</CardTitle>
+                <CardTitle>{t("profile.changePassword")}</CardTitle>
                 <CardDescription>
-                  Update your password to keep your account secure
+                  {t("profile.changePasswordDesc")}
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="space-y-2">
-                  <Label htmlFor="current">Current Password</Label>
+                  <Label htmlFor="current">
+                    {t("profile.currentPassword")}
+                  </Label>
                   <Input id="current" type="password" />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="new">New Password</Label>
+                  <Label htmlFor="new">{t("profile.newPassword")}</Label>
                   <Input id="new" type="password" />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="confirm">Confirm New Password</Label>
+                  <Label htmlFor="confirm">
+                    {t("profile.confirmPassword")}
+                  </Label>
                   <Input id="confirm" type="password" />
                 </div>
-                <Button>Update Password</Button>
+                <Button>{t("profile.updatePassword")}</Button>
               </CardContent>
             </Card>
 
             <Card>
               <CardHeader>
-                <CardTitle>Two-Factor Authentication</CardTitle>
-                <CardDescription>
-                  Add an extra layer of security to your account
-                </CardDescription>
+                <CardTitle>{t("profile.twoFactor")}</CardTitle>
+                <CardDescription>{t("profile.twoFactorDesc")}</CardDescription>
               </CardHeader>
               <CardContent>
-                <Button variant="outline">Enable 2FA</Button>
+                <Button variant="outline">{t("profile.enable2FA")}</Button>
               </CardContent>
             </Card>
           </TabsContent>
@@ -294,26 +237,58 @@ export default function Profile() {
           <TabsContent value="preferences" className="space-y-6">
             <Card>
               <CardHeader>
-                <CardTitle>Notifications</CardTitle>
+                <CardTitle>{t("profile.languageSettings")}</CardTitle>
                 <CardDescription>
-                  Manage how you receive notifications
+                  {t("profile.languageSettingsDesc")}
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="language">{t("profile.language")}</Label>
+                  <div className="relative">
+                    <Languages className="absolute left-3 top-3 w-4 h-4 text-muted-foreground" />
+                    <select
+                      id="language"
+                      value={language}
+                      onChange={(e) =>
+                        setLanguage(e.target.value as "de" | "en")
+                      }
+                      className="w-full pl-10 h-10 px-3 rounded-md border border-input bg-background text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                    >
+                      <option value="de">{t("profile.german")}</option>
+                      <option value="en">{t("profile.english")}</option>
+                    </select>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle>{t("profile.notifications")}</CardTitle>
+                <CardDescription>
+                  {t("profile.notificationsDesc")}
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="font-medium">Email Notifications</p>
+                    <p className="font-medium">
+                      {t("profile.emailNotifications")}
+                    </p>
                     <p className="text-sm text-muted-foreground">
-                      Receive email updates about your activity
+                      {t("profile.emailNotificationsDesc")}
                     </p>
                   </div>
                   <input type="checkbox" defaultChecked />
                 </div>
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="font-medium">SMS Notifications</p>
+                    <p className="font-medium">
+                      {t("profile.smsNotifications")}
+                    </p>
                     <p className="text-sm text-muted-foreground">
-                      Receive SMS alerts for urgent matters
+                      {t("profile.smsNotificationsDesc")}
                     </p>
                   </div>
                   <input type="checkbox" />

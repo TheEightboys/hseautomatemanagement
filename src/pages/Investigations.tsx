@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
+import { useLanguage } from "@/contexts/LanguageContext";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import {
@@ -69,13 +70,15 @@ interface Employee {
 
 export default function Investigations() {
   const { user, loading, companyId } = useAuth();
+  const { t } = useLanguage();
   const navigate = useNavigate();
   const { toast } = useToast();
   const [searchTerm, setSearchTerm] = useState("");
   const [investigations, setInvestigations] = useState<Investigation[]>([]);
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [editingInvestigation, setEditingInvestigation] = useState<Investigation | null>(null);
+  const [editingInvestigation, setEditingInvestigation] =
+    useState<Investigation | null>(null);
   const [filterStatus, setFilterStatus] = useState<string>("all");
   const [filterPriority, setFilterPriority] = useState<string>("all");
 
@@ -110,11 +113,13 @@ export default function Investigations() {
     try {
       const { data, error } = await supabase
         .from("investigations" as any)
-        .select(`
+        .select(
+          `
           *,
           assigned_to:employees!assigned_to_id(full_name),
           incidents:incidents!related_incident_id(title)
-        `)
+        `
+        )
         .eq("company_id", companyId)
         .order("start_date", { ascending: false });
 
@@ -146,8 +151,10 @@ export default function Investigations() {
   const generateInvestigationId = () => {
     const date = new Date();
     const year = date.getFullYear();
-    const month = String(date.getMonth() + 1).padStart(2, '0');
-    const random = Math.floor(Math.random() * 1000).toString().padStart(3, '0');
+    const month = String(date.getMonth() + 1).padStart(2, "0");
+    const random = Math.floor(Math.random() * 1000)
+      .toString()
+      .padStart(3, "0");
     return `INV-${year}${month}-${random}`;
   };
 
@@ -158,10 +165,14 @@ export default function Investigations() {
     try {
       const investigationData = {
         company_id: companyId,
-        investigation_id: formData.investigation_id || generateInvestigationId(),
+        investigation_id:
+          formData.investigation_id || generateInvestigationId(),
         related_incident_id: formData.related_incident_id || null,
         start_date: formData.start_date || new Date().toISOString(),
-        assigned_to_id: formData.assigned_to_id === "none" ? null : formData.assigned_to_id || null,
+        assigned_to_id:
+          formData.assigned_to_id === "none"
+            ? null
+            : formData.assigned_to_id || null,
         status: formData.status,
         priority: formData.priority,
         description: formData.description || null,
@@ -170,20 +181,26 @@ export default function Investigations() {
       };
 
       if (editingInvestigation) {
-        const { error } = await supabase
-          .from("investigations" as any)
+        const { error } = await (supabase as any)
+          .from("investigations")
           .update(investigationData)
           .eq("id", editingInvestigation.id);
 
         if (error) throw error;
-        toast({ title: "Success", description: "Investigation updated successfully" });
+        toast({
+          title: "Success",
+          description: "Investigation updated successfully",
+        });
       } else {
         const { error } = await supabase
           .from("investigations" as any)
-          .insert(investigationData);
+          .insert(investigationData as any);
 
         if (error) throw error;
-        toast({ title: "Success", description: "Investigation created successfully" });
+        toast({
+          title: "Success",
+          description: "Investigation created successfully",
+        });
       }
 
       setIsDialogOpen(false);
@@ -206,9 +223,12 @@ export default function Investigations() {
         .from("investigations" as any)
         .delete()
         .eq("id", id);
-      
+
       if (error) throw error;
-      toast({ title: "Success", description: "Investigation deleted successfully" });
+      toast({
+        title: "Success",
+        description: "Investigation deleted successfully",
+      });
       fetchInvestigations();
     } catch (error: any) {
       toast({
@@ -251,7 +271,13 @@ export default function Investigations() {
   };
 
   const getStatusBadge = (status: string) => {
-    const variants: Record<string, { variant: "default" | "secondary" | "destructive" | "outline", label: string }> = {
+    const variants: Record<
+      string,
+      {
+        variant: "default" | "secondary" | "destructive" | "outline";
+        label: string;
+      }
+    > = {
       open: { variant: "secondary", label: "Open" },
       in_progress: { variant: "default", label: "In Progress" },
       completed: { variant: "outline", label: "Completed" },
@@ -276,32 +302,40 @@ export default function Investigations() {
   };
 
   const filteredInvestigations = investigations.filter((investigation) => {
-    const matchesSearch = investigation.investigation_id.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesStatus = filterStatus === "all" || investigation.status === filterStatus;
-    const matchesPriority = filterPriority === "all" || investigation.priority === filterPriority;
+    const matchesSearch = investigation.investigation_id
+      .toLowerCase()
+      .includes(searchTerm.toLowerCase());
+    const matchesStatus =
+      filterStatus === "all" || investigation.status === filterStatus;
+    const matchesPriority =
+      filterPriority === "all" || investigation.priority === filterPriority;
     return matchesSearch && matchesStatus && matchesPriority;
   });
 
   const exportToPDF = () => {
     const doc = new jsPDF();
-    
+
     // Add title
     doc.setFontSize(18);
     doc.text("Investigations Report", 14, 22);
     doc.setFontSize(11);
     doc.text(`Generated on: ${format(new Date(), "PPP")}`, 14, 30);
-    
+
     // Prepare table data
     const tableData = filteredInvestigations.map((investigation) => [
       investigation.investigation_id,
       format(new Date(investigation.start_date), "MMM dd, yyyy"),
       investigation.assigned_to?.full_name || "Unassigned",
-      investigation.status.charAt(0).toUpperCase() + investigation.status.slice(1),
-      investigation.priority.charAt(0).toUpperCase() + investigation.priority.slice(1),
+      investigation.status.charAt(0).toUpperCase() +
+        investigation.status.slice(1),
+      investigation.priority.charAt(0).toUpperCase() +
+        investigation.priority.slice(1),
     ]);
 
     autoTable(doc, {
-      head: [["Investigation ID", "Start Date", "Assigned To", "Status", "Priority"]],
+      head: [
+        ["Investigation ID", "Start Date", "Assigned To", "Status", "Priority"],
+      ],
       body: tableData,
       startY: 35,
       styles: { fontSize: 9 },
@@ -327,10 +361,8 @@ export default function Investigations() {
     <div className="p-8">
       <div className="mb-8 flex items-center justify-between">
         <div>
-          <h2 className="text-3xl font-bold">Investigations</h2>
-          <p className="text-muted-foreground">
-            Manage incident investigations and findings
-          </p>
+          <h2 className="text-3xl font-bold">{t("investigations.title")}</h2>
+          <p className="text-muted-foreground">{t("investigations.manage")}</p>
         </div>
       </div>
 
@@ -338,165 +370,230 @@ export default function Investigations() {
         <CardHeader>
           <div className="flex items-center justify-between">
             <div>
-              <CardTitle>All Investigations</CardTitle>
-              <CardDescription>
-                Formal investigations for incidents, near-misses, and compliance issues
-              </CardDescription>
+              <CardTitle>
+                {t("common.all")} {t("investigations.title")}
+              </CardTitle>
+              <CardDescription>{t("investigations.manage")}</CardDescription>
             </div>
             <div className="flex gap-2">
               <Button variant="outline" onClick={exportToPDF}>
                 <FileDown className="w-4 h-4 mr-2" />
-                Export PDF
+                {t("investigations.exportPDF")}
               </Button>
               <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
                 <DialogTrigger asChild>
                   <Button onClick={resetForm}>
                     <Plus className="w-4 h-4 mr-2" />
-                    New Investigation
+                    {t("investigations.new")}
                   </Button>
                 </DialogTrigger>
-              <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
-                <DialogHeader>
-                  <DialogTitle>
-                    {editingInvestigation ? "Edit Investigation" : "Create New Investigation"}
-                  </DialogTitle>
-                  <DialogDescription>
-                    Document findings and recommendations from incident investigations
-                  </DialogDescription>
-                </DialogHeader>
-                <form onSubmit={handleSubmit} className="space-y-4">
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <Label htmlFor="investigation_id">Investigation ID</Label>
-                      <Input
-                        id="investigation_id"
-                        value={formData.investigation_id}
-                        onChange={(e) => setFormData({ ...formData, investigation_id: e.target.value })}
-                        placeholder="Auto-generated if empty"
-                      />
+                <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+                  <DialogHeader>
+                    <DialogTitle>
+                      {editingInvestigation
+                        ? t("investigations.edit")
+                        : t("investigations.new")}
+                    </DialogTitle>
+                    <DialogDescription>
+                      {t("investigations.description")}
+                    </DialogDescription>
+                  </DialogHeader>
+                  <form onSubmit={handleSubmit} className="space-y-4">
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <Label htmlFor="investigation_id">
+                          {t("investigations.id")}
+                        </Label>
+                        <Input
+                          id="investigation_id"
+                          value={formData.investigation_id}
+                          onChange={(e) =>
+                            setFormData({
+                              ...formData,
+                              investigation_id: e.target.value,
+                            })
+                          }
+                          placeholder="Auto-generated if empty"
+                        />
+                      </div>
+                      <div>
+                        <Label htmlFor="start_date">
+                          {t("investigations.startDate")} *
+                        </Label>
+                        <Input
+                          id="start_date"
+                          type="date"
+                          value={formData.start_date}
+                          onChange={(e) =>
+                            setFormData({
+                              ...formData,
+                              start_date: e.target.value,
+                            })
+                          }
+                          required
+                        />
+                      </div>
                     </div>
-                    <div>
-                      <Label htmlFor="start_date">Start Date *</Label>
-                      <Input
-                        id="start_date"
-                        type="date"
-                        value={formData.start_date}
-                        onChange={(e) => setFormData({ ...formData, start_date: e.target.value })}
-                        required
-                      />
-                    </div>
-                  </div>
 
-                  <div className="grid grid-cols-2 gap-4">
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <Label htmlFor="status">
+                          {t("investigations.status")} *
+                        </Label>
+                        <Select
+                          value={formData.status}
+                          onValueChange={(value: any) =>
+                            setFormData({ ...formData, status: value })
+                          }
+                        >
+                          <SelectTrigger>
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="open">
+                              {t("investigations.open")}
+                            </SelectItem>
+                            <SelectItem value="in_progress">
+                              {t("investigations.inProgress")}
+                            </SelectItem>
+                            <SelectItem value="completed">
+                              {t("investigations.completed")}
+                            </SelectItem>
+                            <SelectItem value="closed">
+                              {t("investigations.closed")}
+                            </SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div>
+                        <Label htmlFor="priority">
+                          {t("investigations.priority")} *
+                        </Label>
+                        <Select
+                          value={formData.priority}
+                          onValueChange={(value: any) =>
+                            setFormData({ ...formData, priority: value })
+                          }
+                        >
+                          <SelectTrigger>
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="low">
+                              {t("investigations.low")}
+                            </SelectItem>
+                            <SelectItem value="medium">
+                              {t("investigations.medium")}
+                            </SelectItem>
+                            <SelectItem value="high">
+                              {t("investigations.high")}
+                            </SelectItem>
+                            <SelectItem value="critical">
+                              {t("investigations.critical")}
+                            </SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </div>
+
                     <div>
-                      <Label htmlFor="status">Status *</Label>
+                      <Label htmlFor="assigned_to">
+                        {t("investigations.assignedTo")}
+                      </Label>
                       <Select
-                        value={formData.status}
-                        onValueChange={(value: any) => setFormData({ ...formData, status: value })}
+                        value={formData.assigned_to_id}
+                        onValueChange={(value) =>
+                          setFormData({ ...formData, assigned_to_id: value })
+                        }
                       >
                         <SelectTrigger>
-                          <SelectValue />
+                          <SelectValue placeholder={t("common.select")} />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="open">Open</SelectItem>
-                          <SelectItem value="in_progress">In Progress</SelectItem>
-                          <SelectItem value="completed">Completed</SelectItem>
-                          <SelectItem value="closed">Closed</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div>
-                      <Label htmlFor="priority">Priority *</Label>
-                      <Select
-                        value={formData.priority}
-                        onValueChange={(value: any) => setFormData({ ...formData, priority: value })}
-                      >
-                        <SelectTrigger>
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="low">Low</SelectItem>
-                          <SelectItem value="medium">Medium</SelectItem>
-                          <SelectItem value="high">High</SelectItem>
-                          <SelectItem value="critical">Critical</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  </div>
-
-                  <div>
-                    <Label htmlFor="assigned_to">Assigned To</Label>
-                    <Select
-                      value={formData.assigned_to_id}
-                      onValueChange={(value) =>
-                        setFormData({ ...formData, assigned_to_id: value })
-                      }
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select investigator" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="none">None</SelectItem>
-                        {employees.map((emp) => (
-                          <SelectItem key={emp.id} value={emp.id}>
-                            {emp.full_name}
+                          <SelectItem value="none">
+                            {t("common.none")}
                           </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
+                          {employees.map((emp) => (
+                            <SelectItem key={emp.id} value={emp.id}>
+                              {emp.full_name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
 
-                  <div>
-                    <Label htmlFor="description">Description</Label>
-                    <Textarea
-                      id="description"
-                      value={formData.description}
-                      onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                      placeholder="Investigation background and scope"
-                      rows={3}
-                    />
-                  </div>
+                    <div>
+                      <Label htmlFor="description">
+                        {t("investigations.description")}
+                      </Label>
+                      <Textarea
+                        id="description"
+                        value={formData.description}
+                        onChange={(e) =>
+                          setFormData({
+                            ...formData,
+                            description: e.target.value,
+                          })
+                        }
+                        placeholder={t("investigations.description")}
+                        rows={3}
+                      />
+                    </div>
 
-                  <div>
-                    <Label htmlFor="findings">Findings</Label>
-                    <Textarea
-                      id="findings"
-                      value={formData.findings}
-                      onChange={(e) => setFormData({ ...formData, findings: e.target.value })}
-                      placeholder="Root causes and investigation results"
-                      rows={3}
-                    />
-                  </div>
+                    <div>
+                      <Label htmlFor="findings">
+                        {t("investigations.findings")}
+                      </Label>
+                      <Textarea
+                        id="findings"
+                        value={formData.findings}
+                        onChange={(e) =>
+                          setFormData({ ...formData, findings: e.target.value })
+                        }
+                        placeholder={t("investigations.findings")}
+                        rows={3}
+                      />
+                    </div>
 
-                  <div>
-                    <Label htmlFor="recommendations">Recommendations</Label>
-                    <Textarea
-                      id="recommendations"
-                      value={formData.recommendations}
-                      onChange={(e) => setFormData({ ...formData, recommendations: e.target.value })}
-                      placeholder="Preventive measures and corrective actions"
-                      rows={3}
-                    />
-                  </div>
+                    <div>
+                      <Label htmlFor="recommendations">
+                        {t("investigations.recommendations")}
+                      </Label>
+                      <Textarea
+                        id="recommendations"
+                        value={formData.recommendations}
+                        onChange={(e) =>
+                          setFormData({
+                            ...formData,
+                            recommendations: e.target.value,
+                          })
+                        }
+                        placeholder={t("investigations.recommendations")}
+                        rows={3}
+                      />
+                    </div>
 
-                  <div className="flex justify-end gap-2 pt-4">
-                    <Button
-                      type="button"
-                      variant="outline"
-                      onClick={() => {
-                        setIsDialogOpen(false);
-                        resetForm();
-                      }}
-                    >
-                      Cancel
-                    </Button>
-                    <Button type="submit">
-                      {editingInvestigation ? "Update" : "Create"} Investigation
-                    </Button>
-                  </div>
-                </form>
-              </DialogContent>
-            </Dialog>
+                    <div className="flex justify-end gap-2 pt-4">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={() => {
+                          setIsDialogOpen(false);
+                          resetForm();
+                        }}
+                      >
+                        {t("common.cancel")}
+                      </Button>
+                      <Button type="submit">
+                        {editingInvestigation
+                          ? t("common.update")
+                          : t("common.create")}{" "}
+                        {t("investigations.title").slice(0, -2)}
+                      </Button>
+                    </div>
+                  </form>
+                </DialogContent>
+              </Dialog>
             </div>
           </div>
         </CardHeader>
@@ -505,7 +602,7 @@ export default function Investigations() {
             <div className="relative flex-1">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
               <Input
-                placeholder="Search investigations..."
+                placeholder={t("investigations.search")}
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="pl-10"
@@ -513,26 +610,40 @@ export default function Investigations() {
             </div>
             <Select value={filterStatus} onValueChange={setFilterStatus}>
               <SelectTrigger className="w-[180px]">
-                <SelectValue placeholder="Filter by status" />
+                <SelectValue placeholder={t("investigations.filterStatus")} />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">All Statuses</SelectItem>
-                <SelectItem value="open">Open</SelectItem>
-                <SelectItem value="in_progress">In Progress</SelectItem>
-                <SelectItem value="completed">Completed</SelectItem>
-                <SelectItem value="closed">Closed</SelectItem>
+                <SelectItem value="all">
+                  {t("common.all")} {t("investigations.status")}
+                </SelectItem>
+                <SelectItem value="open">{t("investigations.open")}</SelectItem>
+                <SelectItem value="in_progress">
+                  {t("investigations.inProgress")}
+                </SelectItem>
+                <SelectItem value="completed">
+                  {t("investigations.completed")}
+                </SelectItem>
+                <SelectItem value="closed">
+                  {t("investigations.closed")}
+                </SelectItem>
               </SelectContent>
             </Select>
             <Select value={filterPriority} onValueChange={setFilterPriority}>
               <SelectTrigger className="w-[180px]">
-                <SelectValue placeholder="Filter by priority" />
+                <SelectValue placeholder={t("investigations.filterPriority")} />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">All Priorities</SelectItem>
-                <SelectItem value="low">Low</SelectItem>
-                <SelectItem value="medium">Medium</SelectItem>
-                <SelectItem value="high">High</SelectItem>
-                <SelectItem value="critical">Critical</SelectItem>
+                <SelectItem value="all">
+                  {t("common.all")} {t("investigations.priority")}
+                </SelectItem>
+                <SelectItem value="low">{t("investigations.low")}</SelectItem>
+                <SelectItem value="medium">
+                  {t("investigations.medium")}
+                </SelectItem>
+                <SelectItem value="high">{t("investigations.high")}</SelectItem>
+                <SelectItem value="critical">
+                  {t("investigations.critical")}
+                </SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -541,38 +652,59 @@ export default function Investigations() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Investigation ID</TableHead>
-                  <TableHead>Start Date</TableHead>
-                  <TableHead>Assigned To</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Priority</TableHead>
-                  <TableHead className="text-right">Actions</TableHead>
+                  <TableHead>{t("investigations.id")}</TableHead>
+                  <TableHead>{t("investigations.startDate")}</TableHead>
+                  <TableHead>{t("investigations.assignedTo")}</TableHead>
+                  <TableHead>{t("investigations.status")}</TableHead>
+                  <TableHead>{t("investigations.priority")}</TableHead>
+                  <TableHead className="text-right">
+                    {t("investigations.actions")}
+                  </TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {filteredInvestigations.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
-                      No investigations found. Create one to get started.
+                    <TableCell
+                      colSpan={6}
+                      className="text-center py-8 text-muted-foreground"
+                    >
+                      {t("common.none")} {t("investigations.title")} gefunden.{" "}
+                      {t("common.create")} Sie eine neue.
                     </TableCell>
                   </TableRow>
                 ) : (
                   filteredInvestigations.map((investigation) => (
                     <TableRow key={investigation.id}>
-                      <TableCell className="font-medium">{investigation.investigation_id}</TableCell>
+                      <TableCell className="font-medium">
+                        {investigation.investigation_id}
+                      </TableCell>
                       <TableCell>
-                        {format(new Date(investigation.start_date), "MMM dd, yyyy")}
+                        {format(
+                          new Date(investigation.start_date),
+                          "MMM dd, yyyy"
+                        )}
                       </TableCell>
                       <TableCell>
                         {investigation.assigned_to?.full_name || (
-                          <span className="text-muted-foreground">Unassigned</span>
+                          <span className="text-muted-foreground">
+                            {t("investigations.unassigned")}
+                          </span>
                         )}
                       </TableCell>
-                      <TableCell>{getStatusBadge(investigation.status)}</TableCell>
-                      <TableCell>{getPriorityBadge(investigation.priority)}</TableCell>
+                      <TableCell>
+                        {getStatusBadge(investigation.status)}
+                      </TableCell>
+                      <TableCell>
+                        {getPriorityBadge(investigation.priority)}
+                      </TableCell>
                       <TableCell className="text-right">
                         <div className="flex justify-end gap-2">
-                          <Button variant="ghost" size="sm" onClick={() => handleEdit(investigation)}>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleEdit(investigation)}
+                          >
                             <Edit className="w-4 h-4" />
                           </Button>
                           <Button

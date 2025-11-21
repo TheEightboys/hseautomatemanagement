@@ -1,7 +1,18 @@
 import { useEffect, useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
+import { useLanguage } from "@/contexts/LanguageContext";
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft, Plus, Search, CheckCircle, Clock, X, Edit, Trash2, FileDown } from "lucide-react";
+import {
+  ArrowLeft,
+  Plus,
+  Search,
+  CheckCircle,
+  Clock,
+  X,
+  Edit,
+  Trash2,
+  FileDown,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -69,9 +80,10 @@ interface Employee {
 
 export default function Measures() {
   const { user, companyId, loading } = useAuth();
+  const { t } = useLanguage();
   const navigate = useNavigate();
   const { toast } = useToast();
-  
+
   const [measures, setMeasures] = useState<Measure[]>([]);
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
@@ -110,10 +122,12 @@ export default function Measures() {
     try {
       const { data, error } = await supabase
         .from("measures" as any)
-        .select(`
+        .select(
+          `
           *,
           responsible_person:employees!responsible_person_id(full_name)
-        `)
+        `
+        )
         .eq("company_id", companyId)
         .order("created_at", { ascending: false });
 
@@ -158,25 +172,36 @@ export default function Measures() {
         description: formData.description || null,
         measure_type: formData.measure_type,
         status: formData.status,
-        responsible_person_id: formData.responsible_person_id === "none" ? null : formData.responsible_person_id || null,
+        responsible_person_id:
+          formData.responsible_person_id === "none"
+            ? null
+            : formData.responsible_person_id || null,
         due_date: formData.due_date || null,
         completion_date: formData.completion_date || null,
         verification_method: formData.verification_method || null,
       };
 
       if (editingMeasure) {
-        const { error } = await supabase
-          .from("measures" as any)
+        const { error } = await (supabase as any)
+          .from("measures")
           .update(measureData)
           .eq("id", editingMeasure.id);
 
         if (error) throw error;
-        toast({ title: "Success", description: "Measure updated successfully" });
+        toast({
+          title: "Success",
+          description: "Measure updated successfully",
+        });
       } else {
-        const { error } = await supabase.from("measures" as any).insert(measureData);
+        const { error } = await supabase
+          .from("measures" as any)
+          .insert(measureData as any);
 
         if (error) throw error;
-        toast({ title: "Success", description: "Measure created successfully" });
+        toast({
+          title: "Success",
+          description: "Measure created successfully",
+        });
       }
 
       setIsDialogOpen(false);
@@ -195,7 +220,10 @@ export default function Measures() {
     if (!confirm("Are you sure you want to delete this measure?")) return;
 
     try {
-      const { error } = await supabase.from("measures" as any).delete().eq("id", id);
+      const { error } = await supabase
+        .from("measures" as any)
+        .delete()
+        .eq("id", id);
       if (error) throw error;
       toast({ title: "Success", description: "Measure deleted successfully" });
       fetchMeasures();
@@ -238,7 +266,13 @@ export default function Measures() {
   };
 
   const getStatusBadge = (status: string) => {
-    const variants: Record<string, { variant: "default" | "secondary" | "destructive" | "outline", label: string }> = {
+    const variants: Record<
+      string,
+      {
+        variant: "default" | "secondary" | "destructive" | "outline";
+        label: string;
+      }
+    > = {
       planned: { variant: "secondary", label: "Planned" },
       in_progress: { variant: "default", label: "In Progress" },
       completed: { variant: "outline", label: "Completed" },
@@ -262,28 +296,35 @@ export default function Measures() {
   };
 
   const filteredMeasures = measures.filter((measure) => {
-    const matchesSearch = measure.title.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesStatus = filterStatus === "all" || measure.status === filterStatus;
-    const matchesType = filterType === "all" || measure.measure_type === filterType;
+    const matchesSearch = measure.title
+      .toLowerCase()
+      .includes(searchTerm.toLowerCase());
+    const matchesStatus =
+      filterStatus === "all" || measure.status === filterStatus;
+    const matchesType =
+      filterType === "all" || measure.measure_type === filterType;
     return matchesSearch && matchesStatus && matchesType;
   });
 
   const exportToPDF = () => {
     const doc = new jsPDF();
-    
+
     // Add title
     doc.setFontSize(18);
     doc.text("Measures & Controls Report", 14, 22);
     doc.setFontSize(11);
     doc.text(`Generated on: ${format(new Date(), "PPP")}`, 14, 30);
-    
+
     // Prepare table data
     const tableData = filteredMeasures.map((measure) => [
       measure.title,
-      measure.measure_type.charAt(0).toUpperCase() + measure.measure_type.slice(1),
+      measure.measure_type.charAt(0).toUpperCase() +
+        measure.measure_type.slice(1),
       measure.status.charAt(0).toUpperCase() + measure.status.slice(1),
       measure.responsible_person?.full_name || "Unassigned",
-      measure.due_date ? format(new Date(measure.due_date), "MMM dd, yyyy") : "No deadline",
+      measure.due_date
+        ? format(new Date(measure.due_date), "MMM dd, yyyy")
+        : "No deadline",
     ]);
 
     autoTable(doc, {
@@ -315,13 +356,11 @@ export default function Measures() {
         <div className="flex items-center gap-4">
           <Button variant="ghost" onClick={() => navigate("/dashboard")}>
             <ArrowLeft className="w-4 h-4 mr-2" />
-            Back
+            {t("common.back")}
           </Button>
           <div>
-            <h2 className="text-3xl font-bold">Measures & Controls</h2>
-            <p className="text-muted-foreground">
-              Track corrective and preventive actions from risks, audits, and incidents
-            </p>
+            <h2 className="text-3xl font-bold">{t("measures.title")}</h2>
+            <p className="text-muted-foreground">{t("measures.subtitle")}</p>
           </div>
         </div>
       </div>
@@ -330,171 +369,202 @@ export default function Measures() {
         <CardHeader>
           <div className="flex items-center justify-between">
             <div>
-              <CardTitle>All Measures (Maßnahmen)</CardTitle>
-              <CardDescription>
-                Manage corrective, preventive, and improvement measures
-              </CardDescription>
+              <CardTitle>{t("measures.title")}</CardTitle>
+              <CardDescription>{t("measures.subtitle")}</CardDescription>
             </div>
             <div className="flex gap-2">
               <Button variant="outline" onClick={exportToPDF}>
                 <FileDown className="w-4 h-4 mr-2" />
-                Export PDF
+                {t("measures.exportPDF")}
               </Button>
               <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
                 <DialogTrigger asChild>
                   <Button onClick={resetForm}>
                     <Plus className="w-4 h-4 mr-2" />
-                    Add Measure
+                    {t("measures.new")}
                   </Button>
                 </DialogTrigger>
-              <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-                <DialogHeader>
-                  <DialogTitle>
-                    {editingMeasure ? "Edit Measure" : "Create New Measure"}
-                  </DialogTitle>
-                  <DialogDescription>
-                    Define a corrective, preventive, or improvement measure
-                  </DialogDescription>
-                </DialogHeader>
-                <form onSubmit={handleSubmit} className="space-y-4">
-                  <div>
-                    <Label htmlFor="title">Measure Title *</Label>
-                    <Input
-                      id="title"
-                      value={formData.title}
-                      onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-                      placeholder="e.g., Install safety guards on machinery"
-                      required
-                    />
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-4">
+                <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+                  <DialogHeader>
+                    <DialogTitle>
+                      {editingMeasure ? t("measures.edit") : t("measures.new")}
+                    </DialogTitle>
+                    <DialogDescription>
+                      {t("measures.subtitle")}
+                    </DialogDescription>
+                  </DialogHeader>
+                  <form onSubmit={handleSubmit} className="space-y-4">
                     <div>
-                      <Label htmlFor="type">Measure Type *</Label>
-                      <Select
-                        value={formData.measure_type}
-                        onValueChange={(value: any) =>
-                          setFormData({ ...formData, measure_type: value })
-                        }
-                      >
-                        <SelectTrigger>
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="corrective">Corrective</SelectItem>
-                          <SelectItem value="preventive">Preventive</SelectItem>
-                          <SelectItem value="improvement">Improvement</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-
-                    <div>
-                      <Label htmlFor="status">Status *</Label>
-                      <Select
-                        value={formData.status}
-                        onValueChange={(value: any) => setFormData({ ...formData, status: value })}
-                      >
-                        <SelectTrigger>
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="planned">Planned</SelectItem>
-                          <SelectItem value="in_progress">In Progress</SelectItem>
-                          <SelectItem value="completed">Completed</SelectItem>
-                          <SelectItem value="cancelled">Cancelled</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  </div>
-
-                  <div>
-                    <Label htmlFor="description">Description</Label>
-                    <Textarea
-                      id="description"
-                      value={formData.description}
-                      onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                      placeholder="Detailed description of the measure"
-                      rows={3}
-                    />
-                  </div>
-
-                  <div>
-                    <Label htmlFor="responsible">Responsible Person</Label>
-                    <Select
-                      value={formData.responsible_person_id}
-                      onValueChange={(value) =>
-                        setFormData({ ...formData, responsible_person_id: value })
-                      }
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select responsible person" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="none">None</SelectItem>
-                        {employees.map((emp) => (
-                          <SelectItem key={emp.id} value={emp.id}>
-                            {emp.full_name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <Label htmlFor="due_date">Due Date</Label>
+                      <Label htmlFor="title">
+                        {t("measures.measureTitle")} *
+                      </Label>
                       <Input
-                        id="due_date"
-                        type="date"
-                        value={formData.due_date}
-                        onChange={(e) => setFormData({ ...formData, due_date: e.target.value })}
-                      />
-                    </div>
-
-                    <div>
-                      <Label htmlFor="completion_date">Completion Date</Label>
-                      <Input
-                        id="completion_date"
-                        type="date"
-                        value={formData.completion_date}
+                        id="title"
+                        value={formData.title}
                         onChange={(e) =>
-                          setFormData({ ...formData, completion_date: e.target.value })
+                          setFormData({ ...formData, title: e.target.value })
                         }
+                        placeholder="e.g., Install safety guards on machinery"
+                        required
                       />
                     </div>
-                  </div>
 
-                  <div>
-                    <Label htmlFor="verification">Verification Method</Label>
-                    <Textarea
-                      id="verification"
-                      value={formData.verification_method}
-                      onChange={(e) =>
-                        setFormData({ ...formData, verification_method: e.target.value })
-                      }
-                      placeholder="How will this measure be verified?"
-                      rows={2}
-                    />
-                  </div>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <Label htmlFor="type">Measure Type *</Label>
+                        <Select
+                          value={formData.measure_type}
+                          onValueChange={(value: any) =>
+                            setFormData({ ...formData, measure_type: value })
+                          }
+                        >
+                          <SelectTrigger>
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="corrective">
+                              Corrective
+                            </SelectItem>
+                            <SelectItem value="preventive">
+                              Preventive
+                            </SelectItem>
+                            <SelectItem value="improvement">
+                              Improvement
+                            </SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
 
-                  <div className="flex justify-end gap-2 pt-4">
-                    <Button
-                      type="button"
-                      variant="outline"
-                      onClick={() => {
-                        setIsDialogOpen(false);
-                        resetForm();
-                      }}
-                    >
-                      Cancel
-                    </Button>
-                    <Button type="submit">
-                      {editingMeasure ? "Update" : "Create"} Measure
-                    </Button>
-                  </div>
-                </form>
-              </DialogContent>
-            </Dialog>
+                      <div>
+                        <Label htmlFor="status">Status *</Label>
+                        <Select
+                          value={formData.status}
+                          onValueChange={(value: any) =>
+                            setFormData({ ...formData, status: value })
+                          }
+                        >
+                          <SelectTrigger>
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="planned">Planned</SelectItem>
+                            <SelectItem value="in_progress">
+                              In Progress
+                            </SelectItem>
+                            <SelectItem value="completed">Completed</SelectItem>
+                            <SelectItem value="cancelled">Cancelled</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </div>
+
+                    <div>
+                      <Label htmlFor="description">Description</Label>
+                      <Textarea
+                        id="description"
+                        value={formData.description}
+                        onChange={(e) =>
+                          setFormData({
+                            ...formData,
+                            description: e.target.value,
+                          })
+                        }
+                        placeholder="Detailed description of the measure"
+                        rows={3}
+                      />
+                    </div>
+
+                    <div>
+                      <Label htmlFor="responsible">Responsible Person</Label>
+                      <Select
+                        value={formData.responsible_person_id}
+                        onValueChange={(value) =>
+                          setFormData({
+                            ...formData,
+                            responsible_person_id: value,
+                          })
+                        }
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select responsible person" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="none">None</SelectItem>
+                          {employees.map((emp) => (
+                            <SelectItem key={emp.id} value={emp.id}>
+                              {emp.full_name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <Label htmlFor="due_date">Due Date</Label>
+                        <Input
+                          id="due_date"
+                          type="date"
+                          value={formData.due_date}
+                          onChange={(e) =>
+                            setFormData({
+                              ...formData,
+                              due_date: e.target.value,
+                            })
+                          }
+                        />
+                      </div>
+
+                      <div>
+                        <Label htmlFor="completion_date">Completion Date</Label>
+                        <Input
+                          id="completion_date"
+                          type="date"
+                          value={formData.completion_date}
+                          onChange={(e) =>
+                            setFormData({
+                              ...formData,
+                              completion_date: e.target.value,
+                            })
+                          }
+                        />
+                      </div>
+                    </div>
+
+                    <div>
+                      <Label htmlFor="verification">Verification Method</Label>
+                      <Textarea
+                        id="verification"
+                        value={formData.verification_method}
+                        onChange={(e) =>
+                          setFormData({
+                            ...formData,
+                            verification_method: e.target.value,
+                          })
+                        }
+                        placeholder="How will this measure be verified?"
+                        rows={2}
+                      />
+                    </div>
+
+                    <div className="flex justify-end gap-2 pt-4">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={() => {
+                          setIsDialogOpen(false);
+                          resetForm();
+                        }}
+                      >
+                        Cancel
+                      </Button>
+                      <Button type="submit">
+                        {editingMeasure ? "Update" : "Create"} Measure
+                      </Button>
+                    </div>
+                  </form>
+                </DialogContent>
+              </Dialog>
             </div>
           </div>
         </CardHeader>
@@ -549,7 +619,10 @@ export default function Measures() {
               <TableBody>
                 {filteredMeasures.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
+                    <TableCell
+                      colSpan={6}
+                      className="text-center py-8 text-muted-foreground"
+                    >
                       No measures found. Create one to get started.
                     </TableCell>
                   </TableRow>
@@ -566,11 +639,15 @@ export default function Measures() {
                           )}
                         </div>
                       </TableCell>
-                      <TableCell>{getTypeBadge(measure.measure_type)}</TableCell>
+                      <TableCell>
+                        {getTypeBadge(measure.measure_type)}
+                      </TableCell>
                       <TableCell>{getStatusBadge(measure.status)}</TableCell>
                       <TableCell>
                         {measure.responsible_person?.full_name || (
-                          <span className="text-muted-foreground">Unassigned</span>
+                          <span className="text-muted-foreground">
+                            Unassigned
+                          </span>
                         )}
                       </TableCell>
                       <TableCell>
@@ -580,12 +657,18 @@ export default function Measures() {
                             {format(new Date(measure.due_date), "MMM dd, yyyy")}
                           </div>
                         ) : (
-                          <span className="text-muted-foreground">No deadline</span>
+                          <span className="text-muted-foreground">
+                            No deadline
+                          </span>
                         )}
                       </TableCell>
                       <TableCell className="text-right">
                         <div className="flex justify-end gap-2">
-                          <Button variant="ghost" size="sm" onClick={() => handleEdit(measure)}>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleEdit(measure)}
+                          >
                             <Edit className="w-4 h-4" />
                           </Button>
                           <Button

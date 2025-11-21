@@ -1,7 +1,8 @@
 import { useEffect, useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
+import { useLanguage } from "@/contexts/LanguageContext";
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft, Plus, Search } from "lucide-react";
+import { ArrowLeft, Plus, Search, Shield, AlertTriangle, AlertOctagon, Info } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -67,6 +68,7 @@ type RiskFormData = z.infer<typeof riskSchema>;
 
 export default function RiskAssessments() {
   const { user, loading, companyId } = useAuth();
+  const { t } = useLanguage();
   const navigate = useNavigate();
   const { toast } = useToast();
   type RiskWithJoins = Tables<"risk_assessments"> & {
@@ -279,37 +281,39 @@ export default function RiskAssessments() {
               <ArrowLeft className="w-5 h-5" />
             </Button>
             <div>
-              <h1 className="text-xl font-bold">Risk Assessments</h1>
-              <p className="text-xs text-muted-foreground">GBU Management</p>
+              <h1 className="text-xl font-bold">{t("risks.title")}</h1>
+              <p className="text-xs text-muted-foreground">
+                {t("risks.subtitle")}
+              </p>
             </div>
           </div>
         </div>
       </header>
 
       <main className="container mx-auto px-4 py-8">
-        <Card>
+        <Card className="border-0 shadow-xl">
           <CardHeader>
             <div className="flex items-center justify-between">
-              <div>
-                <CardTitle>Risk Assessments</CardTitle>
-                <CardDescription>
-                  Create and review risk assessments (GBU)
-                </CardDescription>
+              <div className="flex items-center gap-3">
+                <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-purple-500 to-indigo-600 flex items-center justify-center shadow-lg">
+                  <Shield className="w-6 h-6 text-white" />
+                </div>
+                <div>
+                  <CardTitle className="text-2xl">{t("risks.title")}</CardTitle>
+                  <CardDescription>{t("risks.subtitle")}</CardDescription>
+                </div>
               </div>
               <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
                 <DialogTrigger asChild>
                   <Button>
                     <Plus className="w-4 h-4 mr-2" />
-                    New Assessment
+                    {t("risks.new")}
                   </Button>
                 </DialogTrigger>
                 <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
                   <DialogHeader>
-                    <DialogTitle>Create Risk Assessment</DialogTitle>
-                    <DialogDescription>
-                      Fill out the form below to create a new risk assessment
-                      for your company.
-                    </DialogDescription>
+                    <DialogTitle>{t("risks.new")}</DialogTitle>
+                    <DialogDescription>{t("risks.subtitle")}</DialogDescription>
                   </DialogHeader>
                   <Form {...form}>
                     <form
@@ -321,7 +325,7 @@ export default function RiskAssessments() {
                         name="title"
                         render={({ field }) => (
                           <FormItem>
-                            <FormLabel>Title</FormLabel>
+                            <FormLabel>{t("risks.riskTitle")}</FormLabel>
                             <FormControl>
                               <Input {...field} />
                             </FormControl>
@@ -335,7 +339,7 @@ export default function RiskAssessments() {
                         name="description"
                         render={({ field }) => (
                           <FormItem>
-                            <FormLabel>Description</FormLabel>
+                            <FormLabel>{t("risks.description")}</FormLabel>
                             <FormControl>
                               <Textarea {...field} rows={3} />
                             </FormControl>
@@ -350,14 +354,16 @@ export default function RiskAssessments() {
                           name="risk_category_id"
                           render={({ field }) => (
                             <FormItem>
-                              <FormLabel>Risk Category</FormLabel>
+                              <FormLabel>{t("risks.category")}</FormLabel>
                               <Select
                                 onValueChange={field.onChange}
                                 value={field.value}
                               >
                                 <FormControl>
                                   <SelectTrigger>
-                                    <SelectValue placeholder="Select category" />
+                                    <SelectValue
+                                      placeholder={t("risks.selectCategory")}
+                                    />
                                   </SelectTrigger>
                                 </FormControl>
                                 <SelectContent>
@@ -378,14 +384,16 @@ export default function RiskAssessments() {
                           name="department_id"
                           render={({ field }) => (
                             <FormItem>
-                              <FormLabel>Department</FormLabel>
+                              <FormLabel>{t("risks.department")}</FormLabel>
                               <Select
                                 onValueChange={field.onChange}
                                 value={field.value}
                               >
                                 <FormControl>
                                   <SelectTrigger>
-                                    <SelectValue placeholder="Select department" />
+                                    <SelectValue
+                                      placeholder={t("risks.selectDepartment")}
+                                    />
                                   </SelectTrigger>
                                 </FormControl>
                                 <SelectContent>
@@ -408,7 +416,9 @@ export default function RiskAssessments() {
                           name="likelihood"
                           render={({ field }) => (
                             <FormItem>
-                              <FormLabel>Likelihood (1-5)</FormLabel>
+                              <FormLabel>
+                                {t("risks.likelihood")} (1-5)
+                              </FormLabel>
                               <Select
                                 onValueChange={(val) =>
                                   field.onChange(parseInt(val))
@@ -441,7 +451,7 @@ export default function RiskAssessments() {
                           name="severity"
                           render={({ field }) => (
                             <FormItem>
-                              <FormLabel>Severity (1-5)</FormLabel>
+                              <FormLabel>{t("risks.severity")} (1-5)</FormLabel>
                               <Select
                                 onValueChange={(val) =>
                                   field.onChange(parseInt(val))
@@ -470,7 +480,7 @@ export default function RiskAssessments() {
                         />
 
                         <div>
-                          <FormLabel>Risk Score</FormLabel>
+                          <FormLabel>{t("risks.riskScore")}</FormLabel>
                           <div className="h-10 flex items-center justify-center rounded-md border bg-muted font-bold text-lg">
                             {riskScore}
                           </div>
@@ -488,7 +498,7 @@ export default function RiskAssessments() {
                         name="mitigation_measures"
                         render={({ field }) => (
                           <FormItem>
-                            <FormLabel>Mitigation Measures</FormLabel>
+                            <FormLabel>{t("risks.mitigation")}</FormLabel>
                             <FormControl>
                               <Textarea {...field} rows={3} />
                             </FormControl>
@@ -502,7 +512,7 @@ export default function RiskAssessments() {
                         name="assessment_date"
                         render={({ field }) => (
                           <FormItem>
-                            <FormLabel>Assessment Date</FormLabel>
+                            <FormLabel>{t("risks.assessmentDate")}</FormLabel>
                             <FormControl>
                               <Input type="date" {...field} />
                             </FormControl>
@@ -517,9 +527,11 @@ export default function RiskAssessments() {
                           variant="outline"
                           onClick={() => setIsDialogOpen(false)}
                         >
-                          Cancel
+                          {t("common.cancel")}
                         </Button>
-                        <Button type="submit">Create Assessment</Button>
+                        <Button type="submit">
+                          {t("common.create")} {t("risks.title").slice(0, -2)}
+                        </Button>
                       </div>
                     </form>
                   </Form>
@@ -528,14 +540,14 @@ export default function RiskAssessments() {
             </div>
           </CardHeader>
           <CardContent>
-            <div className="mb-4">
+            <div className="mb-6">
               <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
+                <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-muted-foreground w-5 h-5" />
                 <Input
-                  placeholder="Search assessments..."
+                  placeholder={t("risks.search")}
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-10"
+                  className="pl-12 h-12 border-2 focus:border-primary transition-colors"
                 />
               </div>
             </div>
@@ -544,14 +556,14 @@ export default function RiskAssessments() {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Title</TableHead>
-                    <TableHead>Risk Category</TableHead>
-                    <TableHead>Department</TableHead>
-                    <TableHead>Risk Level</TableHead>
-                    <TableHead>Risk Score</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Assessment Date</TableHead>
-                    <TableHead>Assessed By</TableHead>
+                    <TableHead>{t("risks.riskTitle")}</TableHead>
+                    <TableHead>{t("risks.category")}</TableHead>
+                    <TableHead>{t("risks.department")}</TableHead>
+                    <TableHead>{t("risks.riskLevel")}</TableHead>
+                    <TableHead>{t("risks.riskScore")}</TableHead>
+                    <TableHead>{t("common.status")}</TableHead>
+                    <TableHead>{t("risks.assessmentDate")}</TableHead>
+                    <TableHead>{t("common.by")}</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -559,14 +571,22 @@ export default function RiskAssessments() {
                     <TableRow>
                       <TableCell
                         colSpan={8}
-                        className="text-center py-8 text-muted-foreground"
+                        className="text-center py-12"
                       >
-                        No risk assessments found
+                        <div className="flex flex-col items-center justify-center">
+                          <Shield className="w-16 h-16 text-muted-foreground/20 mb-4" />
+                          <p className="text-lg font-medium text-muted-foreground mb-1">
+                            No risk assessments found
+                          </p>
+                          <p className="text-sm text-muted-foreground/60">
+                            Create your first risk assessment to get started
+                          </p>
+                        </div>
                       </TableCell>
                     </TableRow>
                   ) : (
                     filteredRisks.map((risk) => (
-                      <TableRow key={risk.id}>
+                      <TableRow key={risk.id} className="hover:bg-muted/70 transition-all duration-200 border-b border-border/50 hover:shadow-sm group">
                         <TableCell className="font-medium">
                           {risk.title}
                         </TableCell>
@@ -575,7 +595,11 @@ export default function RiskAssessments() {
                         </TableCell>
                         <TableCell>{risk.departments?.name || "-"}</TableCell>
                         <TableCell>
-                          <Badge variant={getRiskLevelColor(risk.risk_level)}>
+                          <Badge variant={getRiskLevelColor(risk.risk_level)} className="flex items-center gap-1 px-2.5 py-0.5 font-semibold w-fit">
+                            {risk.risk_level === 'critical' && <AlertOctagon className="w-3 h-3" />}
+                            {risk.risk_level === 'high' && <AlertTriangle className="w-3 h-3" />}
+                            {risk.risk_level === 'medium' && <Info className="w-3 h-3" />}
+                            {risk.risk_level === 'low' && <Info className="w-3 h-3" />}
                             {risk.risk_level}
                           </Badge>
                         </TableCell>
